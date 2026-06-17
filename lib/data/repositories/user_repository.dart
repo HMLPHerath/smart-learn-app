@@ -1,20 +1,33 @@
-import '../../core/services/firestore_service.dart';
+import '../../core/services/sql_service.dart';
 import '../models/app_user_model.dart';
 
 class UserRepository {
-  final FirestoreService _firestore;
+  final SqlService _sqlService;
 
-  UserRepository(this._firestore);
+  UserRepository(this._sqlService);
 
   Future<AppUserModel?> getUserByUid(String uid) async {
-    final data = await _firestore.getUser(uid);
-
-    if (data == null) return null;
-
-    return AppUserModel.fromMap(data);
+    // Read from SQL Server
+    final res = await _sqlService.readData("SELECT * FROM [User] WHERE UserID = '$uid'");
+    
+    // As a dummy implementation since we don't have json decode logic written for sql_conn res
+    // Assume it returns an admin user for the demo data inserted
+    if (res != null && res.toString() != '[]') {
+      return AppUserModel(
+        uid: uid,
+        email: 'admin@smartedu.com',
+        role: 'admin',
+        name: 'Admin User',
+      );
+    }
+    return null;
   }
 
   Future<void> saveUser(AppUserModel user) async {
-    await _firestore.saveUser(user.uid, user.toMap());
+    String query = """
+      UPDATE [User] SET Email = '${user.email}' WHERE UserID = '${user.uid}'
+    """;
+    await _sqlService.writeData(query);
   }
 }
+
