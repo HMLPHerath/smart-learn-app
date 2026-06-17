@@ -164,7 +164,7 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                             title: 'Attendance',
                             icon: Icons.fact_check_outlined,
                             onTap: () =>
-                                context.go(RouteNames.teacherAttendance),
+                                context.push(RouteNames.teacherAttendance),
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -173,7 +173,7 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                             title: 'Gradebook',
                             icon: Icons.auto_graph_outlined,
                             onTap: () =>
-                                context.go(RouteNames.teacherGradebook),
+                                context.push(RouteNames.teacherGradebook),
                           ),
                         ),
                         const SizedBox(width: 12),

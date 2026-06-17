@@ -335,7 +335,7 @@ class _QuickActionsGrid extends StatelessWidget {
 
         return InkWell(
           borderRadius: BorderRadius.circular(18),
-          onTap: () => context.go(item['route']! as String),
+          onTap: () => context.push(item['route']! as String),
           child: Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(

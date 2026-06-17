@@ -231,7 +231,7 @@ class _ParentQuickActions extends StatelessWidget {
           child: Container(
             margin: EdgeInsets.only(right: index == items.length - 1 ? 0 : 10),
             child: GestureDetector(
-              onTap: () => context.go(item['route']! as String),
+              onTap: () => context.push(item['route']! as String),
               child: Container(
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 decoration: BoxDecoration(

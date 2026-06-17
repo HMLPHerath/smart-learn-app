@@ -243,7 +243,7 @@ class _QuickActionGrid extends StatelessWidget {
         final item = items[index];
 
         return GestureDetector(
-          onTap: () => context.go(item['route']! as String),
+          onTap: () => context.push(item['route']! as String),
           child: Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
