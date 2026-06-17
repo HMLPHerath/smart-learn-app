@@ -173,6 +173,49 @@ app.get('/api/students/:id', async (req, res) => {
     }
 });
 
+// Create Student endpoint
+app.post('/api/students', async (req, res) => {
+    try {
+        const { studentId, email, phoneNumber, fullName, dateOfBirth, address, parentId, studentClass } = req.body;
+        const defaultPasswordHash = '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92'; // 123456
+
+        await sql.connect(config);
+        
+        const transaction = new sql.Transaction();
+        await transaction.begin();
+        
+        try {
+            const request1 = new sql.Request(transaction);
+            await request1.query`
+                INSERT INTO [User] (UserID, Email, PasswordHash, PhoneNumber, AccountStatus)
+                VALUES (${studentId}, ${email}, ${defaultPasswordHash}, ${phoneNumber}, 'Active')
+            `;
+            
+            const request2 = new sql.Request(transaction);
+            await request2.query`
+                INSERT INTO Student (StudentID, FullName, DateOfBirth, HomeAddress, BirthCertificatePath, ClassID)
+                VALUES (${studentId}, ${fullName}, ${dateOfBirth}, ${address}, '/docs/default.pdf', NULL)
+            `;
+            
+            if (parentId) {
+                const request3 = new sql.Request(transaction);
+                await request3.query`
+                    INSERT INTO ParentStudentAssociation (ParentID, StudentID, Relationship)
+                    VALUES (${parentId}, ${studentId}, 'Guardian')
+                `;
+            }
+            
+            await transaction.commit();
+            res.json({ success: true, message: 'Student created successfully' });
+        } catch (err) {
+            await transaction.rollback();
+            throw err;
+        }
+    } catch (err) {
+        res.status(500).json({ success: false, message: 'Server error', error: err.message });
+    }
+});
+
 // Get Teachers endpoint
 app.get('/api/teachers', async (req, res) => {
     try {
@@ -202,6 +245,41 @@ app.get('/api/teachers/:id', async (req, res) => {
             res.json({ success: true, teacher: result.recordset[0] });
         } else {
             res.status(404).json({ success: false, message: 'Teacher not found' });
+        }
+    } catch (err) {
+        res.status(500).json({ success: false, message: 'Server error', error: err.message });
+    }
+});
+
+// Create Teacher endpoint
+app.post('/api/teachers', async (req, res) => {
+    try {
+        const { teacherId, email, phoneNumber, fullName, subject, qualifications } = req.body;
+        const defaultPasswordHash = '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92'; // 123456
+
+        await sql.connect(config);
+        
+        const transaction = new sql.Transaction();
+        await transaction.begin();
+        
+        try {
+            const request1 = new sql.Request(transaction);
+            await request1.query`
+                INSERT INTO [User] (UserID, Email, PasswordHash, PhoneNumber, AccountStatus)
+                VALUES (${teacherId}, ${email}, ${defaultPasswordHash}, ${phoneNumber}, 'Active')
+            `;
+            
+            const request2 = new sql.Request(transaction);
+            await request2.query`
+                INSERT INTO Teacher (TeacherID, FullName, Specialization)
+                VALUES (${teacherId}, ${fullName}, ${subject})
+            `;
+            
+            await transaction.commit();
+            res.json({ success: true, message: 'Teacher created successfully' });
+        } catch (err) {
+            await transaction.rollback();
+            throw err;
         }
     } catch (err) {
         res.status(500).json({ success: false, message: 'Server error', error: err.message });
@@ -243,12 +321,65 @@ app.get('/api/parents/:id', async (req, res) => {
     }
 });
 
+// Create Parent endpoint
+app.post('/api/parents', async (req, res) => {
+    try {
+        const { parentId, email, phoneNumber, fullName, nic } = req.body;
+        const defaultPasswordHash = '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92'; // 123456
+
+        await sql.connect(config);
+        
+        const transaction = new sql.Transaction();
+        await transaction.begin();
+        
+        try {
+            const request1 = new sql.Request(transaction);
+            await request1.query`
+                INSERT INTO [User] (UserID, Email, PasswordHash, PhoneNumber, AccountStatus)
+                VALUES (${parentId}, ${email}, ${defaultPasswordHash}, ${phoneNumber}, 'Active')
+            `;
+            
+            const request2 = new sql.Request(transaction);
+            await request2.query`
+                INSERT INTO Parent (ParentID, FullName, NIC_Number, NIC_CopyPath)
+                VALUES (${parentId}, ${fullName}, ${nic}, '/docs/default_nic.pdf')
+            `;
+            
+            await transaction.commit();
+            res.json({ success: true, message: 'Parent created successfully' });
+        } catch (err) {
+            await transaction.rollback();
+            throw err;
+        }
+    } catch (err) {
+        res.status(500).json({ success: false, message: 'Server error', error: err.message });
+    }
+});
+
 // Get Notices endpoint
 app.get('/api/notices', async (req, res) => {
     try {
         await sql.connect(config);
         const result = await sql.query`SELECT * FROM Notice ORDER BY CreatedAt DESC`;
         res.json({ success: true, notices: result.recordset });
+    } catch (err) {
+        res.status(500).json({ success: false, message: 'Server error', error: err.message });
+    }
+});
+
+// Create Notice endpoint
+app.post('/api/notices', async (req, res) => {
+    try {
+        const { noticeId, authorId, subject, noticeBody, audience, isUrgent } = req.body;
+        
+        await sql.connect(config);
+        
+        await sql.query`
+            INSERT INTO Notice (NoticeID, AuthorID, Subject, NoticeBody, Audience, IsUrgent)
+            VALUES (${noticeId}, ${authorId}, ${subject}, ${noticeBody}, ${audience}, ${isUrgent ? 1 : 0})
+        `;
+        
+        res.json({ success: true, message: 'Notice created successfully' });
     } catch (err) {
         res.status(500).json({ success: false, message: 'Server error', error: err.message });
     }

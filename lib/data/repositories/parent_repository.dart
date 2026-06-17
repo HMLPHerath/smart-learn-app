@@ -41,4 +41,23 @@ class ParentRepository {
       return null;
     }
   }
+
+  Future<bool> addParent(Map<String, dynamic> parentData) async {
+    final url = Uri.parse('${sqlService.windowsUrl}/api/parents');
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(parentData),
+      );
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return data['success'] == true;
+      }
+      return false;
+    } catch (e) {
+      print("Error adding parent: $e");
+      return false;
+    }
+  }
 }

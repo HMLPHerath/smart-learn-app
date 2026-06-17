@@ -7,68 +7,63 @@ import '../../core/widgets/app_text_field.dart';
 import '../../core/widgets/top_blue_header.dart';
 import '../../di/injection.dart';
 
-class AdmitStudentScreen extends StatefulWidget {
-  const AdmitStudentScreen({super.key});
+class AddTeacherScreen extends StatefulWidget {
+  const AddTeacherScreen({super.key});
 
   @override
-  State<AdmitStudentScreen> createState() => _AdmitStudentScreenState();
+  State<AddTeacherScreen> createState() => _AddTeacherScreenState();
 }
 
-class _AdmitStudentScreenState extends State<AdmitStudentScreen> {
-  final _studentIdController = TextEditingController();
+class _AddTeacherScreenState extends State<AddTeacherScreen> {
+  final _teacherIdController = TextEditingController();
   final _fullNameController = TextEditingController();
-  final _dobController = TextEditingController();
-  final _classController = TextEditingController();
-  final _addressController = TextEditingController();
-  
-  final _studentEmailController = TextEditingController();
-  final _studentPhoneController = TextEditingController();
+  final _subjectController = TextEditingController();
+  final _qualificationsController = TextEditingController();
+  final _phoneController = TextEditingController();
+  final _emailController = TextEditingController();
 
   bool _isLoading = false;
 
   @override
   void dispose() {
-    _studentIdController.dispose();
+    _teacherIdController.dispose();
     _fullNameController.dispose();
-    _dobController.dispose();
-    _classController.dispose();
-    _addressController.dispose();
-    _studentEmailController.dispose();
-    _studentPhoneController.dispose();
+    _subjectController.dispose();
+    _qualificationsController.dispose();
+    _phoneController.dispose();
+    _emailController.dispose();
     super.dispose();
   }
 
-  Future<void> _submitAdmission() async {
-    if (_studentIdController.text.isEmpty || _fullNameController.text.isEmpty) {
+  Future<void> _submitTeacher() async {
+    if (_teacherIdController.text.isEmpty || _fullNameController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Student ID and Full Name are required')),
+        const SnackBar(content: Text('Teacher ID and Full Name are required')),
       );
       return;
     }
 
     setState(() => _isLoading = true);
 
-    final success = await studentRepository.addStudent({
-      'studentId': _studentIdController.text.trim(),
+    final success = await teacherRepository.addTeacher({
+      'teacherId': _teacherIdController.text.trim(),
       'fullName': _fullNameController.text.trim(),
-      'dateOfBirth': _dobController.text.trim(),
-      'studentClass': _classController.text.trim(),
-      'address': _addressController.text.trim(),
-      'email': _studentEmailController.text.trim(),
-      'phoneNumber': _studentPhoneController.text.trim(),
-      'parentId': null, // Simplifying for now, can be extended later
+      'subject': _subjectController.text.trim(),
+      'qualifications': _qualificationsController.text.trim(),
+      'phoneNumber': _phoneController.text.trim(),
+      'email': _emailController.text.trim(),
     });
 
     setState(() => _isLoading = false);
 
     if (success && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Student admitted successfully! Default password is 123456.')),
+        const SnackBar(content: Text('Teacher added successfully! Default password is 123456.')),
       );
-      context.pop(); // Go back to manage people / dashboard
+      context.pop();
     } else if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to admit student. Please try again.')),
+        const SnackBar(content: Text('Failed to add teacher. Please try again.')),
       );
     }
   }
@@ -100,10 +95,10 @@ class _AdmitStudentScreenState extends State<AdmitStudentScreen> {
                               onPressed: () => context.pop(),
                             ),
                             const Text(
-                              'Admit Student',
+                              'Add Teacher',
                               style: TextStyle(
                                 color: Colors.white,
-                                fontSize: 26,
+                                fontSize: 30,
                                 fontWeight: FontWeight.w700,
                               ),
                             ),
@@ -112,7 +107,7 @@ class _AdmitStudentScreenState extends State<AdmitStudentScreen> {
                         const Padding(
                           padding: EdgeInsets.only(left: 48, top: 6),
                           child: Text(
-                            'Complete student admission details',
+                            'Create a new teacher profile',
                             style: TextStyle(color: Colors.white70, fontSize: 15),
                           ),
                         ),
@@ -123,21 +118,20 @@ class _AdmitStudentScreenState extends State<AdmitStudentScreen> {
                     padding: const EdgeInsets.all(18),
                     child: Column(
                       children: [
-                        const _PhotoUploadCard(),
+                        const _TeacherPhotoCard(),
                         const SizedBox(height: 18),
-                        _AdmissionFormCard(
-                          studentIdController: _studentIdController,
+                        _TeacherFormCard(
+                          teacherIdController: _teacherIdController,
                           fullNameController: _fullNameController,
-                          dobController: _dobController,
-                          classController: _classController,
-                          addressController: _addressController,
-                          studentEmailController: _studentEmailController,
-                          studentPhoneController: _studentPhoneController,
+                          subjectController: _subjectController,
+                          qualificationsController: _qualificationsController,
+                          phoneController: _phoneController,
+                          emailController: _emailController,
                         ),
                         const SizedBox(height: 18),
                         AppButton(
-                          text: 'Complete Admission',
-                          onTap: _submitAdmission,
+                          text: 'Save Teacher',
+                          onTap: _submitTeacher,
                         ),
                       ],
                     ),
@@ -152,31 +146,20 @@ class _AdmitStudentScreenState extends State<AdmitStudentScreen> {
   }
 }
 
-class _PhotoUploadCard extends StatelessWidget {
-  const _PhotoUploadCard();
+class _TeacherPhotoCard extends StatelessWidget {
+  const _TeacherPhotoCard();
 
   @override
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.borderBlue, width: 1.2),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x12000000),
-            blurRadius: 10,
-            offset: Offset(0, 4),
-          ),
-        ],
-      ),
+      decoration: _box(),
       child: Column(
         children: [
           Container(
-            width: 110,
-            height: 110,
+            width: 104,
+            height: 104,
             decoration: BoxDecoration(
               color: const Color(0xFFD7DDF4),
               shape: BoxShape.circle,
@@ -185,12 +168,12 @@ class _PhotoUploadCard extends StatelessWidget {
             child: const Icon(
               Icons.add_a_photo_outlined,
               color: AppColors.primaryBlue,
-              size: 36,
+              size: 34,
             ),
           ),
           const SizedBox(height: 14),
           const Text(
-            'Upload Student Photo',
+            'Upload Teacher Photo',
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w700,
@@ -208,23 +191,21 @@ class _PhotoUploadCard extends StatelessWidget {
   }
 }
 
-class _AdmissionFormCard extends StatelessWidget {
-  final TextEditingController studentIdController;
+class _TeacherFormCard extends StatelessWidget {
+  final TextEditingController teacherIdController;
   final TextEditingController fullNameController;
-  final TextEditingController dobController;
-  final TextEditingController classController;
-  final TextEditingController addressController;
-  final TextEditingController studentEmailController;
-  final TextEditingController studentPhoneController;
+  final TextEditingController subjectController;
+  final TextEditingController qualificationsController;
+  final TextEditingController phoneController;
+  final TextEditingController emailController;
 
-  const _AdmissionFormCard({
-    required this.studentIdController,
+  const _TeacherFormCard({
+    required this.teacherIdController,
     required this.fullNameController,
-    required this.dobController,
-    required this.classController,
-    required this.addressController,
-    required this.studentEmailController,
-    required this.studentPhoneController,
+    required this.subjectController,
+    required this.qualificationsController,
+    required this.phoneController,
+    required this.emailController,
   });
 
   @override
@@ -232,72 +213,54 @@ class _AdmissionFormCard extends StatelessWidget {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.borderBlue, width: 1.2),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x12000000),
-            blurRadius: 10,
-            offset: Offset(0, 4),
-          ),
-        ],
-      ),
+      decoration: _box(),
       child: Column(
         children: [
-          const _SectionLabel(title: 'Student Information'),
+          const _SectionLabel(title: 'Teacher Information'),
           const SizedBox(height: 14),
           AppTextField(
-            controller: studentIdController,
-            label: 'Admission Number',
-            hintText: 'STU-2026-0002',
+            controller: teacherIdController,
+            label: 'Teacher ID',
+            hintText: 'TEA-2026-0002',
             keyboardType: TextInputType.text,
           ),
           const SizedBox(height: 14),
           AppTextField(
             controller: fullNameController,
             label: 'Full Name',
-            hintText: 'Enter student full name',
+            hintText: 'Enter teacher full name',
             keyboardType: TextInputType.text,
           ),
           const SizedBox(height: 14),
           AppTextField(
-            controller: dobController,
-            label: 'Date of Birth',
-            hintText: 'YYYY-MM-DD',
-            keyboardType: TextInputType.datetime,
-          ),
-          const SizedBox(height: 14),
-          AppTextField(
-            controller: classController,
-            label: 'Class',
-            hintText: 'Grade 11-B',
+            controller: subjectController,
+            label: 'Subject',
+            hintText: 'e.g. Mathematics',
             keyboardType: TextInputType.text,
           ),
           const SizedBox(height: 14),
           AppTextField(
-            controller: addressController,
-            label: 'Address',
-            hintText: 'Enter home address',
-            maxLines: 3,
-            keyboardType: TextInputType.multiline,
+            controller: qualificationsController,
+            label: 'Qualifications',
+            hintText: 'BSc. in Mathematics, PGDE',
+            maxLines: 2,
+            keyboardType: TextInputType.text,
           ),
           const SizedBox(height: 18),
           const _SectionLabel(title: 'Contact Information'),
           const SizedBox(height: 14),
           AppTextField(
-            controller: studentEmailController,
-            label: 'Email Address',
-            hintText: 'student@gmail.com',
-            keyboardType: TextInputType.emailAddress,
-          ),
-          const SizedBox(height: 14),
-          AppTextField(
-            controller: studentPhoneController,
+            controller: phoneController,
             label: 'Phone Number',
             hintText: '+94 77 123 4567',
             keyboardType: TextInputType.phone,
+          ),
+          const SizedBox(height: 14),
+          AppTextField(
+            controller: emailController,
+            label: 'Email',
+            hintText: 'teacher@gmail.com',
+            keyboardType: TextInputType.emailAddress,
           ),
         ],
       ),
@@ -334,4 +297,15 @@ class _SectionLabel extends StatelessWidget {
       ],
     );
   }
+}
+
+BoxDecoration _box() {
+  return BoxDecoration(
+    color: Colors.white,
+    borderRadius: BorderRadius.circular(20),
+    border: Border.all(color: AppColors.borderBlue, width: 1.2),
+    boxShadow: const [
+      BoxShadow(color: Color(0x12000000), blurRadius: 10, offset: Offset(0, 4)),
+    ],
+  );
 }

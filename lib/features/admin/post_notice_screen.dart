@@ -1,10 +1,71 @@
 import 'package:flutter/material.dart';
-import '../../core/constants/app_colors.dart';
-import '../../core/widgets/top_blue_header.dart';
-import '../../core/widgets/app_text_field.dart';
+import 'package:go_router/go_router.dart';
 
-class PostNoticeScreen extends StatelessWidget {
+import '../../core/constants/app_colors.dart';
+import '../../core/widgets/app_button.dart';
+import '../../core/widgets/app_text_field.dart';
+import '../../core/widgets/top_blue_header.dart';
+import '../../di/injection.dart';
+
+class PostNoticeScreen extends StatefulWidget {
   const PostNoticeScreen({super.key});
+
+  @override
+  State<PostNoticeScreen> createState() => _PostNoticeScreenState();
+}
+
+class _PostNoticeScreenState extends State<PostNoticeScreen> {
+  final _noticeIdController = TextEditingController();
+  final _authorIdController = TextEditingController();
+  final _subjectController = TextEditingController();
+  final _audienceController = TextEditingController();
+  final _bodyController = TextEditingController();
+
+  bool _isUrgent = false;
+  bool _isLoading = false;
+
+  @override
+  void dispose() {
+    _noticeIdController.dispose();
+    _authorIdController.dispose();
+    _subjectController.dispose();
+    _audienceController.dispose();
+    _bodyController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submitNotice() async {
+    if (_noticeIdController.text.isEmpty || _subjectController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Notice ID and Subject are required')),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    final success = await noticeRepository.addNotice({
+      'noticeId': _noticeIdController.text.trim(),
+      'authorId': _authorIdController.text.trim().isEmpty ? 'ADM-2026-0001' : _authorIdController.text.trim(),
+      'subject': _subjectController.text.trim(),
+      'audience': _audienceController.text.trim(),
+      'noticeBody': _bodyController.text.trim(),
+      'isUrgent': _isUrgent,
+    });
+
+    setState(() => _isLoading = false);
+
+    if (success && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Notice posted successfully!')),
+      );
+      context.pop();
+    } else if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to post notice. Please try again.')),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -14,7 +75,9 @@ class PostNoticeScreen extends StatelessWidget {
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 760),
           child: SafeArea(
-            child: SingleChildScrollView(
+            child: _isLoading 
+              ? const Center(child: CircularProgressIndicator(color: AppColors.primaryBlue))
+              : SingleChildScrollView(
               padding: const EdgeInsets.only(bottom: 28),
               child: Column(
                 children: [
@@ -23,35 +86,51 @@ class PostNoticeScreen extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisAlignment: MainAxisAlignment.end,
-                      children: const [
-                        Text(
-                          'Post Notice',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 30,
-                            fontWeight: FontWeight.w700,
-                          ),
+                      children: [
+                        Row(
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.arrow_back, color: Colors.white),
+                              onPressed: () => context.pop(),
+                            ),
+                            const Text(
+                              'Post Notice',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 30,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
                         ),
-                        SizedBox(height: 6),
-                        Text(
-                          'Publish updates for students, parents and teachers',
-                          style: TextStyle(
-                            color: Colors.white70,
-                            fontSize: 15,
+                        const Padding(
+                          padding: EdgeInsets.only(left: 48, top: 6),
+                          child: Text(
+                            'Publish updates for students, parents and teachers',
+                            style: TextStyle(color: Colors.white70, fontSize: 15),
                           ),
                         ),
                       ],
                     ),
                   ),
-
-                  const Padding(
-                    padding: EdgeInsets.all(18),
+                  Padding(
+                    padding: const EdgeInsets.all(18),
                     child: Column(
                       children: [
-                        _NoticeFormCard(),
-                        SizedBox(height: 18),
-
-                        _NoticePreviewCard(),
+                        _NoticeFormCard(
+                          noticeIdController: _noticeIdController,
+                          authorIdController: _authorIdController,
+                          subjectController: _subjectController,
+                          audienceController: _audienceController,
+                          bodyController: _bodyController,
+                          isUrgent: _isUrgent,
+                          onUrgentChanged: (val) => setState(() => _isUrgent = val),
+                        ),
+                        const SizedBox(height: 18),
+                        AppButton(
+                          text: 'Post Notice',
+                          onTap: _submitNotice,
+                        ),
                       ],
                     ),
                   ),
@@ -66,7 +145,23 @@ class PostNoticeScreen extends StatelessWidget {
 }
 
 class _NoticeFormCard extends StatelessWidget {
-  const _NoticeFormCard();
+  final TextEditingController noticeIdController;
+  final TextEditingController authorIdController;
+  final TextEditingController subjectController;
+  final TextEditingController audienceController;
+  final TextEditingController bodyController;
+  final bool isUrgent;
+  final ValueChanged<bool> onUrgentChanged;
+
+  const _NoticeFormCard({
+    required this.noticeIdController,
+    required this.authorIdController,
+    required this.subjectController,
+    required this.audienceController,
+    required this.bodyController,
+    required this.isUrgent,
+    required this.onUrgentChanged,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -76,133 +171,62 @@ class _NoticeFormCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.borderBlue, width: 1.2),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x12000000),
+            blurRadius: 10,
+            offset: Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
-        children: const [
-          _SectionTitle(title: 'Notice Information'),
-          SizedBox(height: 14),
-
+        children: [
+          const _SectionTitle(title: 'Notice Information'),
+          const SizedBox(height: 14),
           AppTextField(
+            controller: noticeIdController,
+            label: 'Notice ID',
+            hintText: 'NOT-2026-0002',
+          ),
+          const SizedBox(height: 14),
+          AppTextField(
+            controller: authorIdController,
+            label: 'Author ID',
+            hintText: 'ADM-2026-0001',
+          ),
+          const SizedBox(height: 14),
+          AppTextField(
+            controller: subjectController,
             label: 'Subject',
             hintText: 'Enter notice title',
           ),
-          SizedBox(height: 14),
-
+          const SizedBox(height: 14),
           AppTextField(
+            controller: audienceController,
             label: 'Audience',
             hintText: 'Students / Parents / Teachers',
           ),
-          SizedBox(height: 14),
-
+          const SizedBox(height: 14),
           AppTextField(
+            controller: bodyController,
             label: 'Notice Body',
             hintText: 'Write the full notice content here',
             maxLines: 6,
           ),
-          SizedBox(height: 14),
-
-          _UploadTile(
-            title: 'Attach File',
-            subtitle: 'Optional PDF or image attachment',
-            icon: Icons.attach_file_rounded,
-            iconBg: Color(0xFFD7DDF4),
-            iconColor: AppColors.primaryBlue,
-          ),
-          SizedBox(height: 14),
-
-          _UrgentSwitch(),
-        ],
-      ),
-    );
-  }
-}
-
-
-class _NoticePreviewCard extends StatelessWidget {
-  const _NoticePreviewCard();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const _SectionTitle(title: 'Notice Preview'),
           const SizedBox(height: 14),
-
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF9F9F9),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF5DE9B),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: const Text(
-                        'URGENT',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                    const Spacer(),
-                    const Text(
-                      'Today',
-                      style: TextStyle(fontSize: 12),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 14),
-
-                const Text(
-                  'Portal Maintenance Notice',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 8),
-
-                const Text(
-                  'Audience: Students / Parents / Teachers',
-                  style: TextStyle(fontSize: 13),
-                ),
-                const SizedBox(height: 12),
-
-                const Text(
-                  'Portal maintenance schedules for Sunday, 02.00 A.M - 08.00 A.M.',
-                  style: TextStyle(height: 1.5),
-                ),
-              ],
-            ),
+          SwitchListTile(
+            value: isUrgent,
+            onChanged: onUrgentChanged,
+            activeColor: AppColors.primaryBlue,
+            title: const Text('Mark as urgent', style: TextStyle(fontWeight: FontWeight.w600)),
+            subtitle: const Text('This notice will be highlighted in the dashboard'),
           ),
         ],
       ),
     );
   }
 }
-
-
 
 class _SectionTitle extends StatelessWidget {
   final String title;
@@ -212,66 +236,24 @@ class _SectionTitle extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Container(width: 5, height: 20, color: Colors.blue),
+        Container(
+          width: 5,
+          height: 20,
+          decoration: BoxDecoration(
+            color: AppColors.primaryBlue,
+            borderRadius: BorderRadius.circular(20),
+          ),
+        ),
         const SizedBox(width: 10),
         Text(
           title,
           style: const TextStyle(
             fontSize: 17,
             fontWeight: FontWeight.w700,
+            color: AppColors.textBlack,
           ),
         ),
       ],
-    );
-  }
-}
-
-class _UploadTile extends StatelessWidget {
-  final String title;
-  final String subtitle;
-  final IconData icon;
-  final Color iconBg;
-  final Color iconColor;
-
-  const _UploadTile({
-    required this.title,
-    required this.subtitle,
-    required this.icon,
-    required this.iconBg,
-    required this.iconColor,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF9F9F9),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, color: iconColor),
-          const SizedBox(width: 12),
-          Expanded(child: Text(title)),
-          const Icon(Icons.chevron_right_rounded),
-        ],
-      ),
-    );
-  }
-}
-
-class _UrgentSwitch extends StatelessWidget {
-  const _UrgentSwitch();
-
-  @override
-  Widget build(BuildContext context) {
-    return SwitchListTile(
-      value: true,
-      onChanged: (_) {},
-      activeColor: AppColors.primaryBlue,
-      title: const Text('Mark as urgent'),
-      subtitle: const Text('This notice will be highlighted'),
     );
   }
 }

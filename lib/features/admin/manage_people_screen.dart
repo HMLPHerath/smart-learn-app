@@ -4,132 +4,189 @@ import 'package:go_router/go_router.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/routes/route_names.dart';
 import '../../core/widgets/top_blue_header.dart';
+import '../../di/injection.dart';
 
-class ManagePeopleScreen extends StatelessWidget {
+class ManagePeopleScreen extends StatefulWidget {
   const ManagePeopleScreen({super.key});
 
   @override
+  State<ManagePeopleScreen> createState() => _ManagePeopleScreenState();
+}
+
+class _ManagePeopleScreenState extends State<ManagePeopleScreen> {
+  bool _isLoading = true;
+  List<dynamic> _students = [];
+  List<dynamic> _parents = [];
+  List<dynamic> _teachers = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchData();
+  }
+
+  Future<void> _fetchData() async {
+    setState(() => _isLoading = true);
+
+    final results = await Future.wait([
+      studentRepository.getStudents(),
+      parentRepository.getParents(),
+      teacherRepository.getTeachers(),
+    ]);
+
+    if (mounted) {
+      setState(() {
+        _students = results[0];
+        _parents = results[1];
+        _teachers = results[2];
+        _isLoading = false;
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Scaffold(
+        backgroundColor: AppColors.background,
+        body: Center(child: CircularProgressIndicator(color: AppColors.primaryBlue)),
+      );
+    }
+
+    final recentPeople = <Widget>[];
+    if (_students.isNotEmpty) {
+      final s = _students.last;
+      recentPeople.add(_PersonTile(
+        name: s.fullName ?? 'Student',
+        idText: s.studentId ?? '',
+        role: 'Student',
+        roleColor: const Color(0xFFCBE8C7),
+      ));
+      recentPeople.add(const SizedBox(height: 12));
+    }
+    if (_parents.isNotEmpty) {
+      final p = _parents.last;
+      recentPeople.add(_PersonTile(
+        name: p.fullName ?? 'Parent',
+        idText: p.parentId ?? '',
+        role: 'Parent',
+        roleColor: const Color(0xFFD7DDF4),
+      ));
+      recentPeople.add(const SizedBox(height: 12));
+    }
+    if (_teachers.isNotEmpty) {
+      final t = _teachers.last;
+      recentPeople.add(_PersonTile(
+        name: t.fullName ?? 'Teacher',
+        idText: t.teacherId ?? '',
+        role: 'Teacher',
+        roleColor: const Color(0xFFF5DE9B),
+      ));
+    }
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 760),
           child: SafeArea(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.only(bottom: 28),
-              child: Column(
-                children: [
-                  TopBlueHeader(
-                    height: 235,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: const [
-                        Text(
-                          'Manage People',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 30,
-                            fontWeight: FontWeight.w700,
+            child: RefreshIndicator(
+              onRefresh: _fetchData,
+              color: AppColors.primaryBlue,
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.only(bottom: 28),
+                child: Column(
+                  children: [
+                    TopBlueHeader(
+                      height: 235,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: const [
+                          Text(
+                            'Manage People',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 30,
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
-                        ),
-                        SizedBox(height: 6),
-                        Text(
-                          'Add and manage students, parents and teachers',
-                          style: TextStyle(color: Colors.white70, fontSize: 15),
-                        ),
-                      ],
+                          SizedBox(height: 6),
+                          Text(
+                            'Add and manage students, parents and teachers',
+                            style: TextStyle(color: Colors.white70, fontSize: 15),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.all(18),
-                    child: Column(
-                      children: [
-                        const _SectionCard(
-                          title: 'Quick Actions',
-                          child: _QuickActionList(),
-                        ),
-                        const SizedBox(height: 18),
-                        const _SectionCard(
-                          title: 'Recently Added',
-                          child: Column(
-                            children: [
-                              _PersonTile(
-                                name: 'Aruja Wirarathna',
-                                idText: 'STU-2026-0001',
-                                role: 'Student',
-                                roleColor: Color(0xFFCBE8C7),
-                              ),
-                              SizedBox(height: 12),
-                              _PersonTile(
-                                name: 'Sewwandi Perera',
-                                idText: 'PAR-2026-0001',
-                                role: 'Parent',
-                                roleColor: Color(0xFFD7DDF4),
-                              ),
-                              SizedBox(height: 12),
-                              _PersonTile(
-                                name: 'Nuwan Silva',
-                                idText: 'TEA-2026-0001',
-                                role: 'Teacher',
-                                roleColor: Color(0xFFF5DE9B),
-                              ),
-                            ],
+                    Padding(
+                      padding: const EdgeInsets.all(18),
+                      child: Column(
+                        children: [
+                          const _SectionCard(
+                            title: 'Quick Actions',
+                            child: _QuickActionList(),
                           ),
-                        ),
-                        const SizedBox(height: 18),
-                        const _SectionCard(
-                          title: 'People Summary',
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: _MiniSummaryCard(
-                                  title: 'Students',
-                                  value: '1,248',
-                                  icon: Icons.groups_outlined,
+                          const SizedBox(height: 18),
+                          if (recentPeople.isNotEmpty)
+                            _SectionCard(
+                              title: 'Recently Added',
+                              child: Column(children: recentPeople),
+                            ),
+                          if (recentPeople.isNotEmpty) const SizedBox(height: 18),
+                          _SectionCard(
+                            title: 'People Summary',
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: _MiniSummaryCard(
+                                    title: 'Students',
+                                    value: '${_students.length}',
+                                    icon: Icons.groups_outlined,
+                                  ),
                                 ),
-                              ),
-                              SizedBox(width: 12),
-                              Expanded(
-                                child: _MiniSummaryCard(
-                                  title: 'Parents',
-                                  value: '1,102',
-                                  icon: Icons.family_restroom_outlined,
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: _MiniSummaryCard(
+                                    title: 'Parents',
+                                    value: '${_parents.length}',
+                                    icon: Icons.family_restroom_outlined,
+                                  ),
                                 ),
-                              ),
-                              SizedBox(width: 12),
-                              Expanded(
-                                child: _MiniSummaryCard(
-                                  title: 'Teachers',
-                                  value: '86',
-                                  icon: Icons.school_outlined,
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: _MiniSummaryCard(
+                                    title: 'Teachers',
+                                    value: '${_teachers.length}',
+                                    icon: Icons.school_outlined,
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 18),
-                        const _SectionCard(
-                          title: 'Admin Notes',
-                          child: Column(
-                            children: [
-                              _NoteTile(
-                                title: 'Verify parent email addresses',
-                                subtitle: '5 records need updates',
-                              ),
-                              SizedBox(height: 12),
-                              _NoteTile(
-                                title: 'Review teacher assignments',
-                                subtitle: '2 new subject allocations pending',
-                              ),
-                            ],
+                          const SizedBox(height: 18),
+                          const _SectionCard(
+                            title: 'Admin Notes',
+                            child: Column(
+                              children: [
+                                _NoteTile(
+                                  title: 'Verify parent email addresses',
+                                  subtitle: 'Some records might need updates',
+                                ),
+                                SizedBox(height: 12),
+                                _NoteTile(
+                                  title: 'Review teacher assignments',
+                                  subtitle: 'New subject allocations pending',
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
@@ -195,14 +252,7 @@ class _QuickActionList extends StatelessWidget {
           title: 'Add Teacher',
           subtitle: 'Create a new teacher profile',
           icon: Icons.school_outlined,
-          onTap: () {},
-        ),
-        const SizedBox(height: 12),
-        _ActionTile(
-          title: 'View Records',
-          subtitle: 'Open all people records',
-          icon: Icons.badge_outlined,
-          onTap: () {},
+          onTap: () => context.go(RouteNames.adminAddTeacher),
         ),
       ],
     );
@@ -296,7 +346,11 @@ class _PersonTile extends StatelessWidget {
       decoration: _innerBox(),
       child: Row(
         children: [
-          const CircleAvatar(radius: 22),
+          CircleAvatar(
+            radius: 22,
+            backgroundColor: roleColor.withOpacity(0.5),
+            child: Icon(Icons.person, color: AppColors.textBlack.withOpacity(0.6)),
+          ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(

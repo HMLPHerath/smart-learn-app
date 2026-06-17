@@ -304,6 +304,11 @@ class _QuickActionsGrid extends StatelessWidget {
         'route': RouteNames.adminAddParent,
       },
       {
+        'title': 'Add Teacher',
+        'icon': Icons.school_outlined,
+        'route': RouteNames.adminAddTeacher,
+      },
+      {
         'title': 'Manage People',
         'icon': Icons.groups_outlined,
         'route': RouteNames.adminShell,
@@ -311,7 +316,7 @@ class _QuickActionsGrid extends StatelessWidget {
       {
         'title': 'Post Notice',
         'icon': Icons.campaign_outlined,
-        'route': RouteNames.adminShell,
+        'route': RouteNames.adminPostNotice,
       },
     ];
 

@@ -1,8 +1,10 @@
 import 'package:go_router/go_router.dart';
 
 import '../../features/admin/add_parent_screen.dart';
+import '../../features/admin/add_teacher_screen.dart';
 import '../../features/admin/admin_shell.dart';
 import '../../features/admin/admin_student_screen.dart';
+import '../../features/admin/post_notice_screen.dart';
 import '../../features/admin/print_id_card_screen.dart';
 import '../../features/admin/student_success_screen.dart';
 import '../../features/auth/forgot_password_screen.dart';
@@ -81,6 +83,14 @@ GoRouter buildAppRouter({required bool isWeb}) {
       GoRoute(
         path: RouteNames.adminAddParent,
         builder: (context, state) => const AddParentScreen(),
+      ),
+      GoRoute(
+        path: RouteNames.adminAddTeacher,
+        builder: (context, state) => const AddTeacherScreen(),
+      ),
+      GoRoute(
+        path: RouteNames.adminPostNotice,
+        builder: (context, state) => const PostNoticeScreen(),
       ),
       GoRoute(
         path: RouteNames.adminSuccess,

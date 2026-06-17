@@ -41,4 +41,23 @@ class StudentRepository {
       return null;
     }
   }
+
+  Future<bool> addStudent(Map<String, dynamic> studentData) async {
+    final url = Uri.parse('${sqlService.windowsUrl}/api/students');
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(studentData),
+      );
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return data['success'] == true;
+      }
+      return false;
+    } catch (e) {
+      print("Error adding student: $e");
+      return false;
+    }
+  }
 }
