@@ -4,9 +4,35 @@ import 'package:go_router/go_router.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/routes/route_names.dart';
 import '../../core/widgets/top_blue_header.dart';
+import '../../di/injection.dart';
+import '../../data/repositories/admin_repository.dart';
 
-class AdminDashboardScreen extends StatelessWidget {
+class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
+
+  @override
+  State<AdminDashboardScreen> createState() => _AdminDashboardScreenState();
+}
+
+class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
+  bool _isLoading = true;
+  AdminDashboardStats? _stats;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    final stats = await adminRepository.getDashboardStats();
+    if (mounted) {
+      setState(() {
+        _stats = stats;
+        _isLoading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -16,162 +42,157 @@ class AdminDashboardScreen extends StatelessWidget {
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 760),
           child: SafeArea(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.only(bottom: 30),
-              child: Column(
-                children: [
-                  TopBlueHeader(
-                    height: 235,
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator(color: AppColors.primaryBlue))
+                : SingleChildScrollView(
+                    padding: const EdgeInsets.only(bottom: 30),
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.end,
                       children: [
-                        Row(
-                          children: [
-                            Container(
-                              width: 54,
-                              height: 54,
-                              decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(.18),
-                                shape: BoxShape.circle,
-                                border: Border.all(color: Colors.white24),
-                              ),
-                              child: const Icon(
-                                Icons.admin_panel_settings_outlined,
-                                color: Colors.white,
-                                size: 28,
-                              ),
-                            ),
-                            const SizedBox(width: 14),
-                            const Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                        TopBlueHeader(
+                          height: 235,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              Row(
                                 children: [
-                                  Text(
-                                    'Good Morning, Samadhi',
-                                    style: TextStyle(
+                                  Container(
+                                    width: 54,
+                                    height: 54,
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withOpacity(.18),
+                                      shape: BoxShape.circle,
+                                      border: Border.all(color: Colors.white24),
+                                    ),
+                                    child: const Icon(
+                                      Icons.admin_panel_settings_outlined,
                                       color: Colors.white,
-                                      fontSize: 24,
-                                      fontWeight: FontWeight.w700,
+                                      size: 28,
                                     ),
                                   ),
-                                  SizedBox(height: 4),
-                                  Text(
-                                    'Admin Dashboard',
-                                    style: TextStyle(
-                                      color: Colors.white70,
-                                      fontSize: 14,
+                                  const SizedBox(width: 14),
+                                  const Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Good Morning, Admin',
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 24,
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                        ),
+                                        SizedBox(height: 4),
+                                        Text(
+                                          'Admin Dashboard',
+                                          style: TextStyle(
+                                            color: Colors.white70,
+                                            fontSize: 14,
+                                          ),
+                                        ),
+                                      ],
                                     ),
+                                  ),
+                                  const Icon(
+                                    Icons.notifications_none_rounded,
+                                    color: Colors.white,
+                                    size: 28,
                                   ),
                                 ],
                               ),
-                            ),
-                            const Icon(
-                              Icons.notifications_none_rounded,
-                              color: Colors.white,
-                              size: 28,
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
-                      ],
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.all(18),
-                    child: Column(
-                      children: [
-                        LayoutBuilder(
-                          builder: (context, constraints) {
-                            final isWide = constraints.maxWidth > 680;
+                        Padding(
+                          padding: const EdgeInsets.all(18),
+                          child: Column(
+                            children: [
+                              LayoutBuilder(
+                                builder: (context, constraints) {
+                                  final isWide = constraints.maxWidth > 680;
 
-                            return GridView.count(
-                              crossAxisCount: isWide ? 4 : 2,
-                              shrinkWrap: true,
-                              physics: const NeverScrollableScrollPhysics(),
-                              mainAxisSpacing: 12,
-                              crossAxisSpacing: 12,
-                              childAspectRatio: isWide ? 1.35 : 1.0,
-                              children: const [
-                                _StatCard(
-                                  title: 'Students',
-                                  value: '1,248',
-                                  icon: Icons.groups_outlined,
-                                ),
-                                _StatCard(
-                                  title: 'Parents',
-                                  value: '1,102',
-                                  icon: Icons.family_restroom_outlined,
-                                ),
-                                _StatCard(
-                                  title: 'Teachers',
-                                  value: '86',
-                                  icon: Icons.school_outlined,
-                                ),
-                                _StatCard(
-                                  title: 'Notices',
-                                  value: '12',
-                                  icon: Icons.campaign_outlined,
-                                ),
-                              ],
-                            );
-                          },
-                        ),
-                        const SizedBox(height: 18),
-                        const _SectionCard(
-                          title: 'Quick Actions',
-                          child: _QuickActionsGrid(),
-                        ),
-                        const SizedBox(height: 18),
-                        const _SectionCard(
-                          title: 'Recent Alerts',
-                          child: Column(
-                            children: [
-                              _AlertTile(
-                                title: '3 new admission requests pending',
-                                subtitle: 'Check and verify student details',
-                                icon: Icons.pending_actions_outlined,
+                                  return GridView.count(
+                                    crossAxisCount: isWide ? 4 : 2,
+                                    shrinkWrap: true,
+                                    physics: const NeverScrollableScrollPhysics(),
+                                    mainAxisSpacing: 12,
+                                    crossAxisSpacing: 12,
+                                    childAspectRatio: isWide ? 1.35 : 1.0,
+                                    children: [
+                                      _StatCard(
+                                        title: 'Students',
+                                        value: _stats?.totalStudents.toString() ?? '0',
+                                        icon: Icons.groups_outlined,
+                                      ),
+                                      _StatCard(
+                                        title: 'Parents',
+                                        value: _stats?.totalParents.toString() ?? '0',
+                                        icon: Icons.family_restroom_outlined,
+                                      ),
+                                      _StatCard(
+                                        title: 'Teachers',
+                                        value: _stats?.totalTeachers.toString() ?? '0',
+                                        icon: Icons.school_outlined,
+                                      ),
+                                      _StatCard(
+                                        title: 'Notices',
+                                        value: _stats?.totalNotices.toString() ?? '0',
+                                        icon: Icons.campaign_outlined,
+                                      ),
+                                    ],
+                                  );
+                                },
                               ),
-                              SizedBox(height: 12),
-                              _AlertTile(
-                                title: 'Maintenance notice scheduled',
-                                subtitle: 'Sunday, 02.00 A.M - 08.00 A.M',
-                                icon: Icons.warning_amber_rounded,
+                              const SizedBox(height: 18),
+                              const _SectionCard(
+                                title: 'Quick Actions',
+                                child: _QuickActionsGrid(),
                               ),
-                              SizedBox(height: 12),
-                              _AlertTile(
-                                title: '5 parent profiles incomplete',
-                                subtitle: 'Missing email or phone number',
-                                icon: Icons.error_outline_rounded,
+                              const SizedBox(height: 18),
+                              _SectionCard(
+                                title: 'Recent Alerts',
+                                child: _stats != null && _stats!.recentAlerts.isNotEmpty
+                                    ? Column(
+                                        children: _stats!.recentAlerts.map((notice) {
+                                          return Padding(
+                                            padding: const EdgeInsets.only(bottom: 12),
+                                            child: _AlertTile(
+                                              title: notice['Subject'] ?? 'Notice',
+                                              subtitle: notice['NoticeBody'] ?? '',
+                                              icon: Icons.warning_amber_rounded,
+                                            ),
+                                          );
+                                        }).toList(),
+                                      )
+                                    : const Padding(
+                                      padding: EdgeInsets.all(12),
+                                      child: Text('No recent alerts available.'),
+                                    ),
                               ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 18),
-                        const _SectionCard(
-                          title: 'Latest Updates',
-                          child: Column(
-                            children: [
-                              _UpdateTile(
-                                title: 'Aruja Wirarathna admitted successfully',
-                                subtitle: 'Student ID: STU-2026-0001',
-                                status: 'NEW',
-                                statusColor: Color(0xFFCBE8C7),
-                              ),
-                              SizedBox(height: 12),
-                              _UpdateTile(
-                                title:
-                                    'Parent record created for Sewwandi Perera',
-                                subtitle: 'Parent ID: PAR-2026-0001',
-                                status: 'DONE',
-                                statusColor: Color(0xFFD7DDF4),
-                              ),
-                              SizedBox(height: 12),
-                              _UpdateTile(
-                                title: 'New school notice published',
-                                subtitle:
-                                    'Audience: Students / Parents / Teachers',
-                                status: 'LIVE',
-                                statusColor: Color(0xFFF5DE9B),
+                              const SizedBox(height: 18),
+                              _SectionCard(
+                                title: 'Latest Updates',
+                                child: _stats != null && _stats!.latestUpdates.isNotEmpty
+                                    ? Column(
+                                        children: _stats!.latestUpdates.map((update) {
+                                          final id = update['UserID'] ?? '';
+                                          final email = update['Email'] ?? '';
+                                          return Padding(
+                                            padding: const EdgeInsets.only(bottom: 12),
+                                            child: _UpdateTile(
+                                              title: 'New User Registered: $id',
+                                              subtitle: email,
+                                              status: update['AccountStatus'] ?? 'ACTIVE',
+                                              statusColor: const Color(0xFFCBE8C7),
+                                            ),
+                                          );
+                                        }).toList(),
+                                      )
+                                    : const Padding(
+                                      padding: EdgeInsets.all(12),
+                                      child: Text('No latest updates.'),
+                                    ),
                               ),
                             ],
                           ),
@@ -179,9 +200,6 @@ class AdminDashboardScreen extends StatelessWidget {
                       ],
                     ),
                   ),
-                ],
-              ),
-            ),
           ),
         ),
       ),
@@ -305,7 +323,7 @@ class _QuickActionsGrid extends StatelessWidget {
         crossAxisCount: 2,
         crossAxisSpacing: 12,
         mainAxisSpacing: 12,
-        childAspectRatio: 1.55,
+        childAspectRatio: 1.2,
       ),
       itemBuilder: (context, index) {
         final item = items[index];
@@ -393,6 +411,8 @@ class _AlertTile extends StatelessWidget {
                     fontWeight: FontWeight.w700,
                     color: AppColors.textBlack,
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 4),
                 Text(
@@ -401,6 +421,8 @@ class _AlertTile extends StatelessWidget {
                     fontSize: 12,
                     color: AppColors.mutedText,
                   ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
@@ -442,6 +464,8 @@ class _UpdateTile extends StatelessWidget {
                     fontWeight: FontWeight.w700,
                     color: AppColors.textBlack,
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 4),
                 Text(
@@ -450,6 +474,8 @@ class _UpdateTile extends StatelessWidget {
                     fontSize: 12,
                     color: AppColors.mutedText,
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),

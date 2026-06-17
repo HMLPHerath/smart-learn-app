@@ -6,6 +6,7 @@ import '../data/repositories/teacher_repository.dart';
 import '../data/repositories/parent_repository.dart';
 import '../data/repositories/content_repository.dart';
 import '../data/repositories/notice_repository.dart';
+import '../data/repositories/admin_repository.dart';
 
 final sqlService = SqlService();
 
@@ -16,3 +17,4 @@ final teacherRepository = TeacherRepository(sqlService);
 final parentRepository = ParentRepository(sqlService);
 final contentRepository = ContentRepository(sqlService);
 final noticeRepository = NoticeRepository(sqlService);
+final adminRepository = AdminRepository(sqlService);

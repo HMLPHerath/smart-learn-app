@@ -247,7 +247,7 @@ app.get('/api/parents/:id', async (req, res) => {
 app.get('/api/notices', async (req, res) => {
     try {
         await sql.connect(config);
-        const result = await sql.query`SELECT * FROM SystemNotice ORDER BY PublishedDate DESC`;
+        const result = await sql.query`SELECT * FROM Notice ORDER BY CreatedAt DESC`;
         res.json({ success: true, notices: result.recordset });
     } catch (err) {
         res.status(500).json({ success: false, message: 'Server error', error: err.message });
@@ -266,6 +266,44 @@ app.get('/api/courses', async (req, res) => {
 });
 
 const PORT = 3000;
+
+// Get Admin Dashboard Stats
+app.get('/api/admin/dashboard-stats', async (req, res) => {
+    try {
+        await sql.connect(config);
+        const countsResult = await sql.query`
+            SELECT 
+                (SELECT COUNT(*) FROM Student) AS totalStudents,
+                (SELECT COUNT(*) FROM Parent) AS totalParents,
+                (SELECT COUNT(*) FROM Teacher) AS totalTeachers,
+                (SELECT COUNT(*) FROM Notice) AS totalNotices
+        `;
+        
+        const noticesResult = await sql.query`
+            SELECT TOP 3 * FROM Notice 
+            WHERE IsUrgent = 1
+            ORDER BY CreatedAt DESC
+        `;
+        
+        const updatesResult = await sql.query`
+            SELECT TOP 3 UserID, Email, AccountStatus 
+            FROM [User] 
+            ORDER BY UserID DESC
+        `;
+        
+        res.json({ 
+            success: true, 
+            stats: {
+                counts: countsResult.recordset[0],
+                recentAlerts: noticesResult.recordset,
+                latestUpdates: updatesResult.recordset
+            }
+        });
+    } catch (err) {
+        res.status(500).json({ success: false, message: 'Server error', error: err.message });
+    }
+});
+
 app.listen(PORT, () => {
     console.log(`Backend API running at http://localhost:${PORT}`);
 });
