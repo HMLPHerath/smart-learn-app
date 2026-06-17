@@ -55,7 +55,7 @@ app.post('/demo-insert', async (req, res) => {
         await sql.query`
             IF NOT EXISTS (SELECT * FROM [User] WHERE UserID = 'ADM-2026-0001')
             INSERT INTO [User] (UserID, Email, PasswordHash, PhoneNumber, AccountStatus, ProfilePictureURI)
-            VALUES ('ADM-2026-0001', 'admin@smartedu.com', 'demo_hash_here', '0770000000', 'Active', NULL)
+            VALUES ('ADM-2026-0001', 'admin@smartedu.com', '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92', '0770000000', 'Active', NULL)
         `;
         res.json({ success: true, message: 'Demo data inserted successfully into [User] table.' });
     } catch (err) {

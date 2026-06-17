@@ -1,13 +1,21 @@
 import 'dart:convert';
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
 class SqlService {
-  final String baseUrl = 'http://10.0.2.2:3000'; // For Android emulator. Use localhost or IP for windows/real device.
-  // Actually, let's use localhost since they might be running as Windows app
-  // Wait, if it's windows it's localhost. Let's make it configurable or fallback.
-  final String windowsUrl = 'http://localhost:3000';
-  
+  String get windowsUrl {
+    if (kIsWeb) {
+      return 'http://localhost:3000';
+    } else if (Platform.isAndroid) {
+      // Physical phone වලට PC එකේ IP එක දෙන්න ඕනේ. (Emulator එකට නම් 10.0.2.2)
+      return 'http://192.168.1.212:3000';
+    } else {
+      return 'http://localhost:3000';
+    }
+  }
+
   bool _isConnected = false;
 
   Future<void> connect() async {

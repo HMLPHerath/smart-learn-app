@@ -324,6 +324,7 @@ GO
 
 -- Insert User Records
 INSERT INTO [User] (UserID, Email, PasswordHash, PhoneNumber, AccountStatus, ProfilePictureURI) VALUES
+('ADM-2026-0001', 'admin@smartedu.com', '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92', '+94770000000', 'Active', NULL),
 ('STU-2026-0001', 'student@smartedu.com', 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855', '+94771234567', 'Active', NULL),
 ('STU-2026-0002', 'nethmi.p@smartedu.com', '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92', '+94772223334', 'Active', NULL),
 ('STU-2026-0003', 'kavindu.s@smartedu.com', '4813494d137e1631bba301d5acab6e7bb7aa74ce1185d456565ef51d737677b2', '+94773334445', 'Active', NULL),

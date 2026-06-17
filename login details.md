@@ -20,3 +20,9 @@ Password: 123456
 
 Email: parent@smartedu.com
 Password: 123456
+
+
+Backend එක run කරන්න 
+
+cd backend
+node server.js

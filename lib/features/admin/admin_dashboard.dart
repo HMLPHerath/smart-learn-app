@@ -90,7 +90,7 @@ class AdminDashboardScreen extends StatelessWidget {
                               physics: const NeverScrollableScrollPhysics(),
                               mainAxisSpacing: 12,
                               crossAxisSpacing: 12,
-                              childAspectRatio: isWide ? 1.35 : 1.15,
+                              childAspectRatio: isWide ? 1.35 : 1.0,
                               children: const [
                                 _StatCard(
                                   title: 'Students',
