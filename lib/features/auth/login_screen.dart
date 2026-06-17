@@ -56,7 +56,7 @@ class _LoginScreenState extends State<LoginScreen> {
       if (!mounted) return;
 
       if (appUser == null) {
-        throw Exception('User profile not found in Firestore');
+        throw Exception('User profile not found in Database');
       }
 
       switch (appUser.role) {
@@ -73,11 +73,11 @@ class _LoginScreenState extends State<LoginScreen> {
           context.go(RouteNames.adminShell);
           break;
         default:
-          throw Exception('Unknown user role');
+          throw Exception('Unknown user role: ${appUser.role}');
       }
     } catch (e) {
       if (!mounted) return;
-      _showSnack('Login failed. Check email, password, and Firestore role.');
+      _showSnack('Login failed. Check email, password, and Database role.');
     } finally {
       if (mounted) {
         setState(() => loading = false);

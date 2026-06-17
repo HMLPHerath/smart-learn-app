@@ -1,6 +1,7 @@
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import '../../core/services/sql_service.dart';
 
-// Dummy user class since we removed Firebase
 class AuthUser {
   final String uid;
   AuthUser(this.uid);
@@ -13,12 +14,21 @@ class AuthRepository {
   AuthRepository(this._sqlService);
 
   Future<void> login({required String email, required String password}) async {
-    // Note: Use actual password hashing logic instead of plain text if applicable
-    final res = await _sqlService.readData("SELECT UserID FROM [User] WHERE Email = '$email' AND PasswordHash = '$password'");
-    // Dummy check: if we got a user back, set current user
-    if (res.toString() != '[]' && res != null) {
-      // In reality we should parse the JSON from SqlConn to get UserID
-      _currentUser = AuthUser("ADM-2026-0001"); // Using dummy ID for demo
+    final url = Uri.parse('${_sqlService.windowsUrl}/api/login');
+    final response = await http.post(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'email': email, 'password': password}),
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      if (data['success'] == true) {
+        _currentUser = AuthUser(data['userId']);
+        // Store token securely if needed
+      } else {
+        throw Exception(data['message'] ?? 'Login failed');
+      }
     } else {
       throw Exception('Invalid email or password');
     }
@@ -34,4 +44,3 @@ class AuthRepository {
 
   AuthUser? get currentUser => _currentUser;
 }
-

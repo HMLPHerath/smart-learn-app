@@ -17,9 +17,9 @@ class CourseModel {
 
   factory CourseModel.fromMap(Map<String, dynamic> map) {
     return CourseModel(
-      courseId: map['courseId'] ?? '',
-      title: map['title'] ?? '',
-      teacherName: map['teacherName'] ?? '',
+      courseId: map['CourseID'] ?? map['courseId'] ?? '',
+      title: map['CourseName'] ?? map['title'] ?? '',
+      teacherName: map['TeacherName'] ?? map['teacherName'] ?? '',
       startTime: map['startTime'] ?? '',
       endTime: map['endTime'] ?? '',
       status: map['status'] ?? '',

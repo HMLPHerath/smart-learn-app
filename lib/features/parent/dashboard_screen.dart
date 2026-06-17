@@ -5,12 +5,58 @@ import '../../core/constants/app_colors.dart';
 import '../../core/routes/route_names.dart';
 import '../../core/widgets/circular_avatar.dart';
 import '../../core/widgets/top_blue_header.dart';
+import '../../di/injection.dart';
+import '../../data/models/parent_model.dart';
 
-class ParentDashboardScreen extends StatelessWidget {
+class ParentDashboardScreen extends StatefulWidget {
   const ParentDashboardScreen({super.key});
 
   @override
+  State<ParentDashboardScreen> createState() => _ParentDashboardScreenState();
+}
+
+class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
+  bool _loading = true;
+  ParentModel? _parent;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    try {
+      final uid = authRepository.currentUser?.uid;
+      if (uid != null) {
+        final parent = await parentRepository.getParentById(uid);
+        
+        if (mounted) {
+          setState(() {
+            _parent = parent;
+            _loading = false;
+          });
+        }
+      } else {
+        if (mounted) setState(() => _loading = false);
+      }
+    } catch (e) {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    if (_loading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    final name = _parent?.fullName ?? 'Parent';
+    final childName = _parent?.childName ?? 'Child';
+    final childClass = _parent?.className ?? 'Class';
+
     return Scaffold(
       body: SingleChildScrollView(
         child: Column(
@@ -20,27 +66,27 @@ class ParentDashboardScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.end,
-                children: const [
+                children: [
                   Row(
                     children: [
-                      CircularAvatar(radius: 28),
-                      SizedBox(width: 12),
+                      const CircularAvatar(radius: 28),
+                      const SizedBox(width: 12),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Hello, Sewwandi',
-                              style: TextStyle(
+                              'Hello, $name',
+                              style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 24,
                                 fontWeight: FontWeight.w700,
                               ),
                             ),
-                            SizedBox(height: 4),
+                            const SizedBox(height: 4),
                             Text(
-                              'Parent Portal',
-                              style: TextStyle(
+                              'Parent of $childName ($childClass)',
+                              style: const TextStyle(
                                 color: Colors.white70,
                                 fontSize: 14,
                               ),
@@ -48,7 +94,7 @@ class ParentDashboardScreen extends StatelessWidget {
                           ],
                         ),
                       ),
-                      Icon(
+                      const Icon(
                         Icons.notifications_none_rounded,
                         color: Colors.white,
                         size: 28,

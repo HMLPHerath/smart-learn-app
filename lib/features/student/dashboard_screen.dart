@@ -4,12 +4,63 @@ import 'package:go_router/go_router.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/routes/route_names.dart';
 import '../../core/widgets/top_blue_header.dart';
+import '../../di/injection.dart';
+import '../../data/models/student_model.dart';
+import '../../data/models/notice_model.dart';
 
-class StudentDashboardScreen extends StatelessWidget {
+class StudentDashboardScreen extends StatefulWidget {
   const StudentDashboardScreen({super.key});
 
   @override
+  State<StudentDashboardScreen> createState() => _StudentDashboardScreenState();
+}
+
+class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
+  bool _loading = true;
+  StudentModel? _student;
+  List<NoticeModel> _notices = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    try {
+      final uid = authRepository.currentUser?.uid;
+      if (uid != null) {
+        final student = await studentRepository.getStudentById(uid);
+        final notices = await noticeRepository.getNotices();
+        
+        if (mounted) {
+          setState(() {
+            _student = student;
+            _notices = notices;
+            _loading = false;
+          });
+        }
+      } else {
+        if (mounted) setState(() => _loading = false);
+      }
+    } catch (e) {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    if (_loading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    final name = _student?.fullName ?? 'Student';
+    final className = _student?.className ?? 'Unknown Class';
+    final gpa = _student?.gpa.toString() ?? '0.0';
+    final attendance = _student?.attendanceRate.toString() ?? '0';
+
     return Scaffold(
       body: SingleChildScrollView(
         child: Column(
@@ -19,19 +70,19 @@ class StudentDashboardScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.end,
-                children: const [
+                children: [
                   Text(
-                    'Hello, Aruja',
-                    style: TextStyle(
+                    'Hello, $name',
+                    style: const TextStyle(
                       color: Colors.white,
                       fontSize: 28,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
-                  SizedBox(height: 6),
+                  const SizedBox(height: 6),
                   Text(
-                    'Grade 11 • Class B',
-                    style: TextStyle(color: Colors.white70, fontSize: 15),
+                    'Class: $className',
+                    style: const TextStyle(color: Colors.white70, fontSize: 15),
                   ),
                 ],
               ),
@@ -39,69 +90,38 @@ class StudentDashboardScreen extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.all(18),
               child: Column(
-                children: const [
+                children: [
                   Row(
                     children: [
                       Expanded(
                         child: _MiniStatCard(
                           title: 'Attendance',
-                          value: '98%',
+                          value: '$attendance%',
                           icon: Icons.fact_check_outlined,
                         ),
                       ),
-                      SizedBox(width: 12),
+                      const SizedBox(width: 12),
                       Expanded(
                         child: _MiniStatCard(
                           title: 'GPA',
-                          value: '3.8',
+                          value: gpa,
                           icon: Icons.auto_graph_outlined,
                         ),
                       ),
                     ],
                   ),
-                  SizedBox(height: 18),
-                  _QuickActionGrid(),
-                  SizedBox(height: 18),
+                  const SizedBox(height: 18),
+                  const _QuickActionGrid(),
+                  const SizedBox(height: 18),
                   _SectionCard(
-                    title: 'Today Schedule',
-                    items: [
-                      _ScheduleItem(
-                        subject: 'Mathematics',
-                        time: '08.00 AM - 09.00 AM',
-                        status: 'ENDED',
-                      ),
-                      _ScheduleItem(
-                        subject: 'ICT Lab',
-                        time: '10.00 AM - 11.30 AM',
-                        status: 'NOW',
-                      ),
-                      _ScheduleItem(
-                        subject: 'Science',
-                        time: '01.00 PM - 02.00 PM',
-                        status: 'NEXT',
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: 18),
-                  _SectionCard(
-                    title: 'Recent Materials',
-                    items: [
-                      _MaterialItem(
-                        title: 'DBMS Short Note',
-                        subtitle: 'Uploaded today',
-                        icon: Icons.description_outlined,
-                      ),
-                      _MaterialItem(
-                        title: 'Algebra Guide Book',
-                        subtitle: 'Uploaded yesterday',
-                        icon: Icons.book_outlined,
-                      ),
-                      _MaterialItem(
-                        title: 'Flowchart Lesson',
-                        subtitle: 'New video lesson',
-                        icon: Icons.play_circle_outline,
-                      ),
-                    ],
+                    title: 'System Notices',
+                    items: _notices.isEmpty
+                        ? [const Text('No recent notices', style: TextStyle(color: AppColors.mutedText))]
+                        : _notices.take(3).map((n) => _MaterialItem(
+                              title: n.subject,
+                              subtitle: n.body.length > 30 ? '${n.body.substring(0, 30)}...' : n.body,
+                              icon: Icons.notifications_active_outlined,
+                            )).toList(),
                   ),
                 ],
               ),

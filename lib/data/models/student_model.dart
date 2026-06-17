@@ -25,16 +25,16 @@ class StudentModel {
 
   factory StudentModel.fromMap(Map<String, dynamic> map) {
     return StudentModel(
-      uid: map['uid'] ?? '',
-      studentId: map['studentId'] ?? '',
-      fullName: map['fullName'] ?? '',
-      className: map['className'] ?? '',
+      uid: map['StudentID'] ?? map['uid'] ?? '',
+      studentId: map['StudentID'] ?? map['studentId'] ?? '',
+      fullName: map['FullName'] ?? map['fullName'] ?? '',
+      className: map['ClassID']?.toString() ?? map['className'] ?? '',
       section: map['section'] ?? '',
       attendanceRate: map['attendanceRate'] ?? 0,
       gpa: (map['gpa'] ?? 0).toDouble(),
       rank: map['rank'] ?? 0,
       parentId: map['parentId'] ?? '',
-      imageUrl: map['imageUrl'] ?? '',
+      imageUrl: map['ProfilePictureURI'] ?? map['imageUrl'] ?? '',
     );
   }
 

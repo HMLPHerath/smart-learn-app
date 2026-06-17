@@ -19,13 +19,13 @@ class ParentModel {
 
   factory ParentModel.fromMap(Map<String, dynamic> map) {
     return ParentModel(
-      uid: map['uid'] ?? '',
-      parentId: map['parentId'] ?? '',
-      fullName: map['fullName'] ?? '',
+      uid: map['ParentID'] ?? map['uid'] ?? '',
+      parentId: map['ParentID'] ?? map['parentId'] ?? '',
+      fullName: map['FullName'] ?? map['fullName'] ?? '',
       childName: map['childName'] ?? '',
       childStudentId: map['childStudentId'] ?? '',
       className: map['className'] ?? '',
-      imageUrl: map['imageUrl'] ?? '',
+      imageUrl: map['ProfilePictureURI'] ?? map['imageUrl'] ?? '',
     );
   }
 

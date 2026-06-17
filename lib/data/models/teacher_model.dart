@@ -17,12 +17,12 @@ class TeacherModel {
 
   factory TeacherModel.fromMap(Map<String, dynamic> map) {
     return TeacherModel(
-      uid: map['uid'] ?? '',
-      teacherId: map['teacherId'] ?? '',
-      fullName: map['fullName'] ?? '',
-      subject: map['subject'] ?? '',
+      uid: map['TeacherID'] ?? map['uid'] ?? '',
+      teacherId: map['TeacherID'] ?? map['teacherId'] ?? '',
+      fullName: map['FullName'] ?? map['fullName'] ?? '',
+      subject: map['Specialization'] ?? map['subject'] ?? '',
       className: map['className'] ?? '',
-      imageUrl: map['imageUrl'] ?? '',
+      imageUrl: map['ProfilePictureURI'] ?? map['imageUrl'] ?? '',
     );
   }
 

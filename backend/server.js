@@ -57,11 +57,211 @@ app.post('/demo-insert', async (req, res) => {
             INSERT INTO [User] (UserID, Email, PasswordHash, PhoneNumber, AccountStatus, ProfilePictureURI)
             VALUES ('ADM-2026-0001', 'admin@smartedu.com', 'demo_hash_here', '0770000000', 'Active', NULL)
         `;
-        
         res.json({ success: true, message: 'Demo data inserted successfully into [User] table.' });
     } catch (err) {
         console.error('Insert failed', err);
         res.status(500).json({ success: false, message: 'Failed to insert data', error: err.message });
+    }
+});
+
+// Login endpoint
+app.post('/api/login', async (req, res) => {
+    try {
+        const { email, password } = req.body;
+        const crypto = require('crypto');
+        const hashedPassword = crypto.createHash('sha256').update(password).digest('hex');
+        await sql.connect(config);
+        
+        // Use parameterized query to prevent SQL injection
+        const result = await sql.query`SELECT * FROM [User] WHERE Email = ${email} AND PasswordHash = ${hashedPassword}`;
+        
+        if (result.recordset.length > 0) {
+            const user = result.recordset[0];
+            
+            // Determine role from UserID prefix
+            let role = 'unknown';
+            if (user.UserID.startsWith('ADM-')) role = 'admin';
+            else if (user.UserID.startsWith('STU-')) role = 'student';
+            else if (user.UserID.startsWith('TEA-')) role = 'teacher';
+            else if (user.UserID.startsWith('PAR-')) role = 'parent';
+            
+            res.json({
+                success: true,
+                message: 'Login successful',
+                token: 'dummy_jwt_token_12345',
+                userId: user.UserID,
+                role: role,
+                email: user.Email,
+                name: user.UserID // We'll use ID as name until we fetch the profile
+            });
+        } else {
+            res.status(401).json({ success: false, message: 'Invalid email or password' });
+        }
+    } catch (err) {
+        console.error('Login failed', err);
+        res.status(500).json({ success: false, message: 'Server error during login', error: err.message });
+    }
+});
+
+// Get user profile endpoint
+app.get('/api/users/:id', async (req, res) => {
+    try {
+        const userId = req.params.id;
+        await sql.connect(config);
+        
+        const result = await sql.query`SELECT * FROM [User] WHERE UserID = ${userId}`;
+        
+        if (result.recordset.length > 0) {
+            const user = result.recordset[0];
+            let role = 'unknown';
+            if (user.UserID.startsWith('ADM-')) role = 'admin';
+            else if (user.UserID.startsWith('STU-')) role = 'student';
+            else if (user.UserID.startsWith('TEA-')) role = 'teacher';
+            else if (user.UserID.startsWith('PAR-')) role = 'parent';
+            
+            res.json({
+                success: true,
+                user: {
+                    uid: user.UserID,
+                    email: user.Email,
+                    role: role,
+                    name: user.UserID, // Default name fallback
+                    accountStatus: user.AccountStatus,
+                    profilePicture: user.ProfilePictureURI
+                }
+            });
+        } else {
+            res.status(404).json({ success: false, message: 'User not found' });
+        }
+    } catch (err) {
+        res.status(500).json({ success: false, message: 'Server error', error: err.message });
+    }
+});
+
+// Get Students endpoint
+app.get('/api/students', async (req, res) => {
+    try {
+        await sql.connect(config);
+        const result = await sql.query`
+            SELECT s.*, u.Email, u.PhoneNumber, u.AccountStatus, u.ProfilePictureURI 
+            FROM Student s 
+            JOIN [User] u ON s.StudentID = u.UserID
+        `;
+        res.json({ success: true, students: result.recordset });
+    } catch (err) {
+        res.status(500).json({ success: false, message: 'Server error', error: err.message });
+    }
+});
+
+// Get Student by ID
+app.get('/api/students/:id', async (req, res) => {
+    try {
+        await sql.connect(config);
+        const result = await sql.query`
+            SELECT s.*, u.Email, u.PhoneNumber, u.AccountStatus, u.ProfilePictureURI 
+            FROM Student s 
+            JOIN [User] u ON s.StudentID = u.UserID
+            WHERE s.StudentID = ${req.params.id}
+        `;
+        if (result.recordset.length > 0) {
+            res.json({ success: true, student: result.recordset[0] });
+        } else {
+            res.status(404).json({ success: false, message: 'Student not found' });
+        }
+    } catch (err) {
+        res.status(500).json({ success: false, message: 'Server error', error: err.message });
+    }
+});
+
+// Get Teachers endpoint
+app.get('/api/teachers', async (req, res) => {
+    try {
+        await sql.connect(config);
+        const result = await sql.query`
+            SELECT t.*, u.Email, u.PhoneNumber, u.AccountStatus, u.ProfilePictureURI 
+            FROM Teacher t 
+            JOIN [User] u ON t.TeacherID = u.UserID
+        `;
+        res.json({ success: true, teachers: result.recordset });
+    } catch (err) {
+        res.status(500).json({ success: false, message: 'Server error', error: err.message });
+    }
+});
+
+// Get Teacher by ID
+app.get('/api/teachers/:id', async (req, res) => {
+    try {
+        await sql.connect(config);
+        const result = await sql.query`
+            SELECT t.*, u.Email, u.PhoneNumber, u.AccountStatus, u.ProfilePictureURI 
+            FROM Teacher t 
+            JOIN [User] u ON t.TeacherID = u.UserID
+            WHERE t.TeacherID = ${req.params.id}
+        `;
+        if (result.recordset.length > 0) {
+            res.json({ success: true, teacher: result.recordset[0] });
+        } else {
+            res.status(404).json({ success: false, message: 'Teacher not found' });
+        }
+    } catch (err) {
+        res.status(500).json({ success: false, message: 'Server error', error: err.message });
+    }
+});
+
+// Get Parents endpoint
+app.get('/api/parents', async (req, res) => {
+    try {
+        await sql.connect(config);
+        const result = await sql.query`
+            SELECT p.*, u.Email, u.PhoneNumber, u.AccountStatus, u.ProfilePictureURI 
+            FROM Parent p 
+            JOIN [User] u ON p.ParentID = u.UserID
+        `;
+        res.json({ success: true, parents: result.recordset });
+    } catch (err) {
+        res.status(500).json({ success: false, message: 'Server error', error: err.message });
+    }
+});
+
+// Get Parent by ID
+app.get('/api/parents/:id', async (req, res) => {
+    try {
+        await sql.connect(config);
+        const result = await sql.query`
+            SELECT p.*, u.Email, u.PhoneNumber, u.AccountStatus, u.ProfilePictureURI 
+            FROM Parent p 
+            JOIN [User] u ON p.ParentID = u.UserID
+            WHERE p.ParentID = ${req.params.id}
+        `;
+        if (result.recordset.length > 0) {
+            res.json({ success: true, parent: result.recordset[0] });
+        } else {
+            res.status(404).json({ success: false, message: 'Parent not found' });
+        }
+    } catch (err) {
+        res.status(500).json({ success: false, message: 'Server error', error: err.message });
+    }
+});
+
+// Get Notices endpoint
+app.get('/api/notices', async (req, res) => {
+    try {
+        await sql.connect(config);
+        const result = await sql.query`SELECT * FROM SystemNotice ORDER BY PublishedDate DESC`;
+        res.json({ success: true, notices: result.recordset });
+    } catch (err) {
+        res.status(500).json({ success: false, message: 'Server error', error: err.message });
+    }
+});
+
+// Get Courses endpoint
+app.get('/api/courses', async (req, res) => {
+    try {
+        await sql.connect(config);
+        const result = await sql.query`SELECT * FROM Course`;
+        res.json({ success: true, courses: result.recordset });
+    } catch (err) {
+        res.status(500).json({ success: false, message: 'Server error', error: err.message });
     }
 });
 

@@ -17,12 +17,12 @@ class NoticeModel {
 
   factory NoticeModel.fromMap(Map<String, dynamic> map) {
     return NoticeModel(
-      noticeId: map['noticeId'] ?? '',
-      subject: map['subject'] ?? '',
-      audience: map['audience'] ?? '',
-      body: map['body'] ?? '',
+      noticeId: map['NoticeID'] ?? map['noticeId'] ?? '',
+      subject: map['Title'] ?? map['subject'] ?? '',
+      audience: map['TargetAudience'] ?? map['audience'] ?? '',
+      body: map['Content'] ?? map['body'] ?? '',
       attachmentUrl: map['attachmentUrl'] ?? '',
-      urgent: map['urgent'] ?? false,
+      urgent: (map['IsPinned'] == 1 || map['IsPinned'] == true) || (map['urgent'] ?? false),
     );
   }
 

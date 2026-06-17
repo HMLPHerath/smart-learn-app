@@ -4,12 +4,67 @@ import 'package:go_router/go_router.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/routes/route_names.dart';
 import '../../core/widgets/top_blue_header.dart';
+import '../../di/injection.dart';
+import '../../data/models/teacher_model.dart';
+import '../../data/models/course_model.dart';
+import '../../data/models/notice_model.dart';
 
-class TeacherDashboardScreen extends StatelessWidget {
+class TeacherDashboardScreen extends StatefulWidget {
   const TeacherDashboardScreen({super.key});
 
   @override
+  State<TeacherDashboardScreen> createState() => _TeacherDashboardScreenState();
+}
+
+class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
+  bool _loading = true;
+  TeacherModel? _teacher;
+  List<CourseModel> _courses = [];
+  List<NoticeModel> _notices = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    try {
+      final uid = authRepository.currentUser?.uid;
+      if (uid != null) {
+        final teacher = await teacherRepository.getTeacherById(uid);
+        final courses = await contentRepository.getCourses();
+        final notices = await noticeRepository.getNotices();
+        
+        if (mounted) {
+          setState(() {
+            _teacher = teacher;
+            _courses = courses;
+            _notices = notices;
+            _loading = false;
+          });
+        }
+      } else {
+        if (mounted) setState(() => _loading = false);
+      }
+    } catch (e) {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    if (_loading) {
+      return const Scaffold(
+        backgroundColor: AppColors.background,
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    final name = _teacher?.fullName ?? 'Teacher';
+    final subject = _teacher?.subject ?? 'Subject Teacher';
+    final className = _teacher?.className ?? 'General Class';
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -40,22 +95,22 @@ class TeacherDashboardScreen extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(width: 14),
-                        const Expanded(
+                        Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Hello, Mr. Nuwan',
-                                style: TextStyle(
+                                'Hello, $name',
+                                style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 24,
                                   fontWeight: FontWeight.w700,
                                 ),
                               ),
-                              SizedBox(height: 4),
+                              const SizedBox(height: 4),
                               Text(
-                                'ICT Teacher • Grade 11',
-                                style: TextStyle(
+                                '$subject Teacher • $className',
+                                style: const TextStyle(
                                   color: Colors.white70,
                                   fontSize: 14,
                                 ),
@@ -80,19 +135,19 @@ class TeacherDashboardScreen extends StatelessWidget {
                   children: [
                     /// top stats
                     Row(
-                      children: const [
+                      children: [
                         Expanded(
                           child: _TopStatCard(
-                            title: 'Today Classes',
-                            value: '04',
+                            title: 'Total Courses',
+                            value: _courses.length.toString(),
                             icon: Icons.menu_book_outlined,
                           ),
                         ),
-                        SizedBox(width: 12),
-                        Expanded(
+                        const SizedBox(width: 12),
+                        const Expanded(
                           child: _TopStatCard(
                             title: 'Students',
-                            value: '128',
+                            value: 'Active',
                             icon: Icons.groups_outlined,
                           ),
                         ),
@@ -135,54 +190,44 @@ class TeacherDashboardScreen extends StatelessWidget {
                     const SizedBox(height: 18),
 
                     /// upcoming class
-                    const _SectionCard(
-                      title: 'Upcoming Class',
+                    _SectionCard(
+                      title: 'My Courses',
                       child: Column(
-                        children: [
-                          _ScheduleTile(
-                            subject: 'ICT Lab Practical',
-                            time: '10.00 AM - 11.30 AM',
-                            room: 'Computer Lab',
-                            chip: 'NOW',
-                            chipColor: Color(0xFFCBE8C7),
-                          ),
-                          SizedBox(height: 12),
-                          _ScheduleTile(
-                            subject: 'Grade 11 Theory',
-                            time: '01.00 PM - 02.00 PM',
-                            room: 'Room 203',
-                            chip: 'NEXT',
-                            chipColor: Color(0xFFD7DDF4),
-                          ),
-                        ],
+                        children: _courses.isEmpty
+                            ? [const Text('No courses assigned', style: TextStyle(color: AppColors.mutedText))]
+                            : _courses.take(2).map((c) => Column(
+                                children: [
+                                  _ScheduleTile(
+                                    subject: c.title,
+                                    time: '${c.startTime} - ${c.endTime}',
+                                    room: 'Status: ${c.status}',
+                                    chip: c.status == 'Active' ? 'NOW' : 'NEXT',
+                                    chipColor: c.status == 'Active' ? const Color(0xFFCBE8C7) : const Color(0xFFD7DDF4),
+                                  ),
+                                  const SizedBox(height: 12),
+                                ],
+                              )).toList(),
                       ),
                     ),
 
                     const SizedBox(height: 18),
 
                     /// pending tasks
-                    const _SectionCard(
-                      title: 'Pending Tasks',
+                    _SectionCard(
+                      title: 'System Notices',
                       child: Column(
-                        children: [
-                          _TaskTile(
-                            title: 'Mark attendance for Grade 11-B',
-                            subtitle: 'Due before 10.00 AM',
-                            icon: Icons.checklist_rtl,
-                          ),
-                          SizedBox(height: 12),
-                          _TaskTile(
-                            title: 'Upload DBMS homework sheet',
-                            subtitle: 'Due today',
-                            icon: Icons.upload_file_outlined,
-                          ),
-                          SizedBox(height: 12),
-                          _TaskTile(
-                            title: 'Reply parent messages',
-                            subtitle: '3 unread chats',
-                            icon: Icons.chat_outlined,
-                          ),
-                        ],
+                        children: _notices.isEmpty
+                            ? [const Text('No recent notices', style: TextStyle(color: AppColors.mutedText))]
+                            : _notices.take(3).map((n) => Column(
+                                children: [
+                                  _TaskTile(
+                                    title: n.subject,
+                                    subtitle: n.body.length > 30 ? '${n.body.substring(0, 30)}...' : n.body,
+                                    icon: Icons.info_outline,
+                                  ),
+                                  const SizedBox(height: 12),
+                                ],
+                              )).toList(),
                       ),
                     ),
 
