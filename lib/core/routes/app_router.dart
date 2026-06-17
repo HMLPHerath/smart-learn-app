@@ -2,22 +2,15 @@ import 'package:go_router/go_router.dart';
 
 import '../../features/admin/add_parent_screen.dart';
 import '../../features/admin/admin_shell.dart';
-import '../../features/admin/admit_student_screen.dart';
+import '../../features/admin/admin_student_screen.dart';
 import '../../features/admin/print_id_card_screen.dart';
 import '../../features/admin/student_success_screen.dart';
 import '../../features/auth/forgot_password_screen.dart';
 import '../../features/auth/login_screen.dart';
 import '../../features/parent/parent_shell.dart';
-import '../../features/parent/dashboard_screen.dart';
-import '../../features/parent/chat_screen.dart';
-import '../../features/parent/widgets/parent_bottom_bar.dart';
 import '../../features/splash/splash_screen.dart';
-import '../../features/student/courses_screen.dart';
-import '../../features/student/dashboard_screen.dart';
 import '../../features/student/guide_books_screen.dart';
-import '../../features/student/profile_screen.dart';
 import '../../features/student/short_notes_screen.dart';
-import '../../features/student/schedule_screen.dart';
 import '../../features/student/student_shell.dart';
 
 import '../../features/teacher/attendance_screen.dart';

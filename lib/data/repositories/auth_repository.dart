@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../core/services/auth_service.dart';
 
 class AuthRepository {
@@ -17,5 +18,5 @@ class AuthRepository {
     await _authService.forgotPassword(email);
   }
 
-  get currentUser => _authService.currentUser;
+  User? get currentUser => _authService.currentUser;
 }

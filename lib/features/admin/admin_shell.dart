@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'dashboard_screen.dart';
+import 'admin_dashboard.dart';
 import 'manage_people_screen.dart';
 import 'post_notice_screen.dart';
 import 'print_id_card_screen.dart';
