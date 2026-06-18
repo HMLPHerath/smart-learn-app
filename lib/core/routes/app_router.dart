@@ -17,6 +17,7 @@ import '../../features/student/student_shell.dart';
 
 import '../../features/teacher/attendance_screen.dart';
 import '../../features/teacher/gradebook_screen.dart';
+import '../../features/teacher/student_profile_screen.dart';
 import '../../features/teacher/teacher_shell.dart';
 import 'route_names.dart';
 
@@ -69,6 +70,13 @@ GoRouter buildAppRouter({required bool isWeb}) {
       GoRoute(
         path: RouteNames.teacherAttendance,
         builder: (context, state) => const TeacherAttendanceScreen(),
+      ),
+      GoRoute(
+        path: RouteNames.teacherStudentProfile,
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return StudentProfileScreen(studentId: id);
+        },
       ),
 
       /// admin

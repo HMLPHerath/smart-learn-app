@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../core/constants/app_colors.dart';
+import '../../core/routes/route_names.dart';
 import '../../core/widgets/search_box.dart';
 import '../../core/widgets/top_blue_header.dart';
 import '../../di/injection.dart';
@@ -124,6 +126,11 @@ class _TeacherStudentsScreenState extends State<TeacherStudentsScreen> {
                     SearchBox(
                       hintText: 'Search students by name or ID',
                       onChanged: _onSearchChanged,
+                      onTapFilter: () {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Advanced filtering coming soon')),
+                        );
+                      },
                     ),
                     const SizedBox(height: 16),
                     Row(
@@ -197,14 +204,19 @@ class _StudentTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.only(bottom: 14),
-      padding: const EdgeInsets.all(14),
-      decoration: _box(),
-      child: Row(
-        children: [
-          const CircleAvatar(
+    return InkWell(
+      onTap: () {
+        context.push('/teacher/student-profile/$id');
+      },
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        width: double.infinity,
+        margin: const EdgeInsets.only(bottom: 14),
+        padding: const EdgeInsets.all(14),
+        decoration: _box(),
+        child: Row(
+          children: [
+            const CircleAvatar(
             radius: 24,
             backgroundColor: Color(0xFFD7DDF4),
             child: Icon(Icons.person, color: AppColors.primaryBlue),
@@ -262,6 +274,7 @@ class _StudentTile extends StatelessWidget {
           const Icon(Icons.chevron_right_rounded, color: AppColors.primaryBlue),
         ],
       ),
+    ),
     );
   }
 }

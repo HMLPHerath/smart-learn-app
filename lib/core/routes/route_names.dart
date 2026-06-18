@@ -12,6 +12,7 @@ class RouteNames {
   static const teacherShell = '/teacher';
   static const teacherGradebook = '/teacher/gradebook';
   static const teacherAttendance = '/teacher/attendance';
+  static const teacherStudentProfile = '/teacher/student-profile/:id';
 
   static const adminShell = '/admin';
   static const adminAdmitStudent = '/admin/admit-student';
