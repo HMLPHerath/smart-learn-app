@@ -1,23 +1,39 @@
 class GuideBookModel {
-  final String bookId;
-  final String subjectName;
+  final int bookId;
+  final String title;
+  final String subtitle;
+  final String iconName;
+  final String colorHex;
   final String fileUrl;
+  final String category;
 
   GuideBookModel({
     required this.bookId,
-    required this.subjectName,
+    required this.title,
+    required this.subtitle,
+    required this.iconName,
+    required this.colorHex,
     required this.fileUrl,
+    required this.category,
   });
 
   factory GuideBookModel.fromMap(Map<String, dynamic> map) => GuideBookModel(
-    bookId: map['bookId'] ?? '',
-    subjectName: map['subjectName'] ?? '',
-    fileUrl: map['fileUrl'] ?? '',
+    bookId: map['BookID'] ?? 0,
+    title: map['Title'] ?? '',
+    subtitle: map['Subtitle'] ?? '',
+    iconName: map['IconName'] ?? '',
+    colorHex: map['ColorHex'] ?? '',
+    fileUrl: map['FileUrl'] ?? '',
+    category: map['Category'] ?? '',
   );
 
   Map<String, dynamic> toMap() => {
-    'bookId': bookId,
-    'subjectName': subjectName,
-    'fileUrl': fileUrl,
+    'BookID': bookId,
+    'Title': title,
+    'Subtitle': subtitle,
+    'IconName': iconName,
+    'ColorHex': colorHex,
+    'FileUrl': fileUrl,
+    'Category': category,
   };
 }

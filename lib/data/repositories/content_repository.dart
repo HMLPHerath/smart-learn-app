@@ -4,6 +4,7 @@ import '../../core/services/sql_service.dart';
 import '../models/course_model.dart';
 import '../models/notice_model.dart';
 import '../models/schedule_model.dart';
+import '../models/guide_book_model.dart';
 
 class ContentRepository {
   final SqlService sqlService;
@@ -37,7 +38,68 @@ class ContentRepository {
   }
 
   Stream<List<Map<String, dynamic>>> shortNotes() => const Stream.empty();
-  Stream<List<Map<String, dynamic>>> guideBooks() => const Stream.empty();
+
+  Future<List<GuideBookModel>> getGuideBooks() async {
+    final url = Uri.parse('${sqlService.windowsUrl}/api/guidebooks');
+    try {
+      final response = await http.get(url);
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] == true && data['guidebooks'] != null) {
+          final List<dynamic> list = data['guidebooks'];
+          return list.map((item) => GuideBookModel.fromMap(item)).toList();
+        }
+      }
+      return [];
+    } catch (e) {
+      print("Error fetching guide books: $e");
+      return [];
+    }
+  }
+
+  Future<bool> addGuideBook(GuideBookModel book) async {
+    final url = Uri.parse('${sqlService.windowsUrl}/api/guidebooks');
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(book.toMap()),
+      );
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return data['success'] == true;
+      }
+      return false;
+    } catch (e) {
+      print("Error adding guide book: $e");
+      return false;
+    }
+  }
+
+  Future<String?> uploadFile(List<int> bytes, String filename) async {
+    final url = Uri.parse('${sqlService.windowsUrl}/api/upload');
+    try {
+      final request = http.MultipartRequest('POST', url);
+      request.files.add(http.MultipartFile.fromBytes(
+        'file',
+        bytes,
+        filename: filename,
+      ));
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] == true && data['fileUrl'] != null) {
+          return data['fileUrl'];
+        }
+      }
+      return null;
+    } catch (e) {
+      print("Error uploading file: $e");
+      return null;
+    }
+  }
+
   Stream<List<Map<String, dynamic>>> courses() => const Stream.empty();
   Stream<List<Map<String, dynamic>>> results() => const Stream.empty();
   Stream<List<Map<String, dynamic>>> notices() => const Stream.empty();

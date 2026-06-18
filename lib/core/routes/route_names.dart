@@ -14,6 +14,9 @@ class RouteNames {
   static const teacherAttendance = '/teacher/attendance';
   static const teacherStudentProfile = '/teacher/student-profile/:id';
   static const teacherChat = '/teacher/chat/:parentId';
+  static const teacherBooks = '/teacher/books';
+  static const teacherAddBook = '/teacher/books/add';
+
 
   static const adminShell = '/admin';
   static const adminAdmitStudent = '/admin/admit-student';

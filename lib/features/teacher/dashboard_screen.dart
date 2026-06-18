@@ -179,11 +179,27 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                         const SizedBox(width: 12),
                         Expanded(
                           child: _QuickCard(
+                            title: 'Guide Books',
+                            icon: Icons.menu_book_outlined,
+                            onTap: () => context.push(RouteNames.teacherBooks),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _QuickCard(
                             title: 'Messages',
                             icon: Icons.chat_bubble_outline,
                             onTap: () => context.go(RouteNames.teacherShell),
                           ),
                         ),
+                        const SizedBox(width: 12),
+                        const Expanded(child: SizedBox()), // Placeholder for alignment
+                        const SizedBox(width: 12),
+                        const Expanded(child: SizedBox()), // Placeholder for alignment
                       ],
                     ),
 

@@ -1,10 +1,35 @@
 const express = require('express');
 const sql = require('mssql/msnodesqlv8');
 const cors = require('cors');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
 
 const app = express();
 app.use(cors());
 app.use(express.json());
+
+// Ensure uploads directory exists
+const uploadsDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir);
+}
+
+// Serve uploaded files statically
+app.use('/uploads', express.static(uploadsDir));
+
+// Multer storage configuration
+const storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        cb(null, uploadsDir);
+    },
+    filename: function (req, file, cb) {
+        // Create unique filename
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        cb(null, 'book-' + uniqueSuffix + path.extname(file.originalname));
+    }
+});
+const upload = multer({ storage: storage });
 
 // Configuration for Windows Authentication
 const config = {
@@ -605,6 +630,52 @@ app.post('/api/gradebook', async (req, res) => {
             await transaction.rollback();
             throw err;
         }
+    } catch (err) {
+        res.status(500).json({ success: false, message: 'Server error', error: err.message });
+    }
+});
+
+// --- GUIDEBOOKS ENDPOINTS ---
+
+app.post('/api/upload', upload.single('file'), (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ success: false, message: 'No file uploaded' });
+        }
+        
+        const fileUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
+        
+        res.json({ 
+            success: true, 
+            message: 'File uploaded successfully',
+            fileUrl: fileUrl
+        });
+    } catch (err) {
+        res.status(500).json({ success: false, message: 'Server error during file upload', error: err.message });
+    }
+});
+
+app.get('/api/guidebooks', async (req, res) => {
+    try {
+        await sql.connect(config);
+        const result = await sql.query`SELECT * FROM GuideBook ORDER BY BookID DESC`;
+        res.json({ success: true, guidebooks: result.recordset });
+    } catch (err) {
+        res.status(500).json({ success: false, message: 'Server error', error: err.message });
+    }
+});
+
+app.post('/api/guidebooks', async (req, res) => {
+    try {
+        const { title, subtitle, iconName, colorHex, fileUrl, category } = req.body;
+        await sql.connect(config);
+        
+        await sql.query`
+            INSERT INTO GuideBook (Title, Subtitle, IconName, ColorHex, FileUrl, Category)
+            VALUES (${title}, ${subtitle}, ${iconName}, ${colorHex}, ${fileUrl}, ${category})
+        `;
+        
+        res.json({ success: true, message: 'Guide book added successfully' });
     } catch (err) {
         res.status(500).json({ success: false, message: 'Server error', error: err.message });
     }

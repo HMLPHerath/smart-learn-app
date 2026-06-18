@@ -21,6 +21,8 @@ import '../../features/teacher/gradebook_screen.dart';
 import '../../features/teacher/student_profile_screen.dart';
 import '../../data/repositories/chat_local_repository.dart';
 import '../../features/teacher/teacher_shell.dart';
+import '../../features/teacher/teacher_guide_books_screen.dart';
+import '../../features/teacher/upload_guide_book_screen.dart';
 import 'route_names.dart';
 
 GoRouter buildAppRouter({required bool isWeb}) {
@@ -86,6 +88,14 @@ GoRouter buildAppRouter({required bool isWeb}) {
           final contact = state.extra as ParentContact;
           return ChatConversationScreen(contact: contact);
         },
+      ),
+      GoRoute(
+        path: RouteNames.teacherBooks,
+        builder: (context, state) => const TeacherGuideBooksScreen(),
+      ),
+      GoRoute(
+        path: RouteNames.teacherAddBook,
+        builder: (context, state) => const UploadGuideBookScreen(),
       ),
 
       /// admin
