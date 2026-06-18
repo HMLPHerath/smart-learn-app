@@ -1,5 +1,76 @@
 const express = require('express');
-const sql = require('mssql/msnodesqlv8');
+const { Pool } = require('pg');
+require('dotenv').config();
+
+const pool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: { rejectUnauthorized: false }
+});
+
+const sql = {
+    async query(strings, ...values) {
+        let text = typeof strings === 'string' ? strings : strings[0];
+        let vals = values;
+        if (typeof strings !== 'string') {
+            for (let i = 0; i < values.length; i++) {
+                text += '$' + (i + 1) + strings[i + 1];
+            }
+        }
+        text = text.replace(/\[User\]/g, '"User"');
+        text = text.replace(/sysobjects WHERE name='([^']+)' and xtype='U'/g, "information_schema.tables WHERE table_name='$1'");
+        text = text.replace(/\bISNULL\b/gi, 'COALESCE');
+        
+        if (/SELECT TOP (\d+) ([\s\S]*)/i.test(text)) {
+            const limit = text.match(/SELECT TOP (\d+)/i)[1];
+            text = text.replace(/SELECT TOP \d+/i, 'SELECT');
+            text = text + ' LIMIT ' + limit;
+        }
+        
+        try {
+            const res = await pool.query(text, vals);
+            return { recordset: res.rows.map(row => new Proxy(row, { get: (t, n) => typeof n === 'string' ? (t[n] !== undefined ? t[n] : t[n.toLowerCase()]) : t[n] })) };
+        } catch (err) {
+            console.error('DB Error:', text, err.message);
+            throw err;
+        }
+    },
+    Transaction: class {
+        async begin() {
+            this.client = await pool.connect();
+            await this.client.query('BEGIN');
+        }
+        async commit() {
+            await this.client.query('COMMIT');
+            this.client.release();
+        }
+        async rollback() {
+            await this.client.query('ROLLBACK');
+            if (this.client) this.client.release();
+        }
+    },
+    Request: class {
+        constructor(transaction) {
+            this.transaction = transaction;
+        }
+        async query(strings, ...values) {
+            let text = typeof strings === 'string' ? strings : strings[0];
+            let vals = values;
+            if (typeof strings !== 'string') {
+                for (let i = 0; i < values.length; i++) {
+                    text += '$' + (i + 1) + strings[i + 1];
+                }
+            }
+            text = text.replace(/\[User\]/g, '"User"');
+            text = text.replace(/sysobjects WHERE name='([^']+)' and xtype='U'/g, "information_schema.tables WHERE table_name='$1'");
+            text = text.replace(/\bISNULL\b/gi, 'COALESCE');
+            
+            const res = await this.transaction.client.query(text, vals);
+            return { recordset: res.rows.map(row => new Proxy(row, { get: (t, n) => typeof n === 'string' ? (t[n] !== undefined ? t[n] : t[n.toLowerCase()]) : t[n] })) };
+        }
+    },
+    connect: async () => { return pool; }
+};
+
 const cors = require('cors');
 const multer = require('multer');
 const path = require('path');
@@ -45,7 +116,7 @@ const config = {
 // Test connection endpoint
 app.get('/test', async (req, res) => {
     try {
-        await sql.connect(config);
+        await sql.connect();
         const result = await sql.query`SELECT 1 as test`;
         res.json({ success: true, message: 'Successfully connected to SQL Server using Windows Authentication!', result: result.recordset });
     } catch (err) {
@@ -57,7 +128,7 @@ app.get('/test', async (req, res) => {
 // Demo insert endpoint
 app.post('/demo-insert', async (req, res) => {
     try {
-        await sql.connect(config);
+        await sql.connect();
         
         // Ensure table exists, if not, create a basic one for demo
         try {
@@ -95,7 +166,7 @@ app.post('/api/login', async (req, res) => {
         const { email, password } = req.body;
         const crypto = require('crypto');
         const hashedPassword = crypto.createHash('sha256').update(password).digest('hex');
-        await sql.connect(config);
+        await sql.connect();
         
         // Use parameterized query to prevent SQL injection
         const result = await sql.query`SELECT * FROM [User] WHERE Email = ${email} AND PasswordHash = ${hashedPassword}`;
@@ -132,7 +203,7 @@ app.post('/api/login', async (req, res) => {
 app.get('/api/users/:id', async (req, res) => {
     try {
         const userId = req.params.id;
-        await sql.connect(config);
+        await sql.connect();
         
         const result = await sql.query`SELECT * FROM [User] WHERE UserID = ${userId}`;
         
@@ -166,7 +237,7 @@ app.get('/api/users/:id', async (req, res) => {
 // Get Students endpoint
 app.get('/api/students', async (req, res) => {
     try {
-        await sql.connect(config);
+        await sql.connect();
         const result = await sql.query`
             SELECT s.*, u.Email, u.PhoneNumber, u.AccountStatus, u.ProfilePictureURI 
             FROM Student s 
@@ -182,7 +253,7 @@ app.get('/api/students', async (req, res) => {
 app.get('/api/student/:id/profile', async (req, res) => {
     try {
         const studentId = req.params.id;
-        await sql.connect(config);
+        await sql.connect();
         
         const result = await sql.query`
             SELECT 
@@ -214,7 +285,7 @@ app.get('/api/student/:id/profile', async (req, res) => {
 app.get('/api/teacher/:id/profile', async (req, res) => {
     try {
         const teacherId = req.params.id;
-        await sql.connect(config);
+        await sql.connect();
         
         const result = await sql.query`
             SELECT 
@@ -268,7 +339,7 @@ app.get('/api/teacher/:id/profile', async (req, res) => {
 app.get('/api/parent/:id/profile', async (req, res) => {
     try {
         const parentId = req.params.id;
-        await sql.connect(config);
+        await sql.connect();
         
         const result = await sql.query`
             SELECT 
@@ -297,7 +368,7 @@ app.get('/api/parent/:id/profile', async (req, res) => {
 app.get('/api/parent/:id/results', async (req, res) => {
     try {
         const parentId = req.params.id;
-        await sql.connect(config);
+        await sql.connect();
         
         // Find the student ID for this parent
         const studentResult = await sql.query`SELECT StudentID FROM Student WHERE ParentID = ${parentId}`;
@@ -344,7 +415,7 @@ app.get('/api/parent/:id/results', async (req, res) => {
 app.get('/api/parent/:id/teachers', async (req, res) => {
     try {
         const parentId = req.params.id;
-        await sql.connect(config);
+        await sql.connect();
         
         // Find the student ID & ClassID for this parent
         const studentResult = await sql.query`SELECT ClassID FROM Student WHERE ParentID = ${parentId}`;
@@ -374,7 +445,7 @@ app.get('/api/parent/:id/teachers', async (req, res) => {
 // Get Student by ID
 app.get('/api/students/:id', async (req, res) => {
     try {
-        await sql.connect(config);
+        await sql.connect();
         const result = await sql.query`
             SELECT s.*, u.Email, u.PhoneNumber, u.AccountStatus, u.ProfilePictureURI,
                 ISNULL((
@@ -417,7 +488,7 @@ app.post('/api/students', async (req, res) => {
         const { studentId, email, phoneNumber, fullName, dateOfBirth, address, parentId, studentClass } = req.body;
         const defaultPasswordHash = '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92'; // 123456
 
-        await sql.connect(config);
+        await sql.connect();
         
         const transaction = new sql.Transaction();
         await transaction.begin();
@@ -457,7 +528,7 @@ app.post('/api/students', async (req, res) => {
 // Get Teachers endpoint
 app.get('/api/teachers', async (req, res) => {
     try {
-        await sql.connect(config);
+        await sql.connect();
         const result = await sql.query`
             SELECT t.*, u.Email, u.PhoneNumber, u.AccountStatus, u.ProfilePictureURI 
             FROM Teacher t 
@@ -472,7 +543,7 @@ app.get('/api/teachers', async (req, res) => {
 // Get Teacher by ID
 app.get('/api/teachers/:id', async (req, res) => {
     try {
-        await sql.connect(config);
+        await sql.connect();
         const result = await sql.query`
             SELECT t.*, u.Email, u.PhoneNumber, u.AccountStatus, u.ProfilePictureURI 
             FROM Teacher t 
@@ -492,7 +563,7 @@ app.get('/api/teachers/:id', async (req, res) => {
 // Get all distinct students taught by a teacher
 app.get('/api/teacher/:id/students', async (req, res) => {
     try {
-        await sql.connect(config);
+        await sql.connect();
         const result = await sql.query`
             SELECT DISTINCT s.StudentID, s.FullName, c.ClassName, u.AccountStatus 
             FROM Student s 
@@ -510,7 +581,7 @@ app.get('/api/teacher/:id/students', async (req, res) => {
 // Get all distinct parents associated with a teacher's students
 app.get('/api/teacher/:id/parents', async (req, res) => {
     try {
-        await sql.connect(config);
+        await sql.connect();
         const result = await sql.query`
             SELECT DISTINCT p.ParentID, p.FullName, u.ProfilePictureURI, s.FullName as StudentName
             FROM ScheduleItem si
@@ -533,7 +604,7 @@ app.post('/api/teachers', async (req, res) => {
         const { teacherId, email, phoneNumber, fullName, subject, qualifications } = req.body;
         const defaultPasswordHash = '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92'; // 123456
 
-        await sql.connect(config);
+        await sql.connect();
         
         const transaction = new sql.Transaction();
         await transaction.begin();
@@ -565,7 +636,7 @@ app.post('/api/teachers', async (req, res) => {
 // Get Parents endpoint
 app.get('/api/parents', async (req, res) => {
     try {
-        await sql.connect(config);
+        await sql.connect();
         const result = await sql.query`
             SELECT p.*, u.Email, u.PhoneNumber, u.AccountStatus, u.ProfilePictureURI 
             FROM Parent p 
@@ -580,7 +651,7 @@ app.get('/api/parents', async (req, res) => {
 // Get Parent by ID
 app.get('/api/parents/:id', async (req, res) => {
     try {
-        await sql.connect(config);
+        await sql.connect();
         const result = await sql.query`
             SELECT p.*, u.Email, u.PhoneNumber, u.AccountStatus, u.ProfilePictureURI,
                    s.FullName AS childName, s.StudentID AS childStudentId, s.ClassID AS className
@@ -606,7 +677,7 @@ app.post('/api/parents', async (req, res) => {
         const { parentId, email, phoneNumber, fullName, nic } = req.body;
         const defaultPasswordHash = '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92'; // 123456
 
-        await sql.connect(config);
+        await sql.connect();
         
         const transaction = new sql.Transaction();
         await transaction.begin();
@@ -638,7 +709,7 @@ app.post('/api/parents', async (req, res) => {
 // Get Notices endpoint
 app.get('/api/notices', async (req, res) => {
     try {
-        await sql.connect(config);
+        await sql.connect();
         const result = await sql.query`SELECT * FROM Notice ORDER BY CreatedAt DESC`;
         res.json({ success: true, notices: result.recordset });
     } catch (err) {
@@ -651,7 +722,7 @@ app.post('/api/notices', async (req, res) => {
     try {
         const { noticeId, authorId, subject, noticeBody, audience, isUrgent } = req.body;
         
-        await sql.connect(config);
+        await sql.connect();
         
         await sql.query`
             INSERT INTO Notice (CreatorAdminID, Subject, NoticeBody, Audience, IsUrgent)
@@ -667,7 +738,7 @@ app.post('/api/notices', async (req, res) => {
 // Get Courses endpoint
 app.get('/api/courses', async (req, res) => {
     try {
-        await sql.connect(config);
+        await sql.connect();
         const result = await sql.query`SELECT * FROM Course`;
         res.json({ success: true, courses: result.recordset });
     } catch (err) {
@@ -678,7 +749,7 @@ app.get('/api/courses', async (req, res) => {
 // Get Classes endpoint
 app.get('/api/classes', async (req, res) => {
     try {
-        await sql.connect(config);
+        await sql.connect();
         const result = await sql.query`SELECT ClassID, ClassName FROM Class ORDER BY ClassName`;
         res.json({ success: true, classes: result.recordset });
     } catch (err) {
@@ -689,7 +760,7 @@ app.get('/api/classes', async (req, res) => {
 // Get Teachers endpoint
 app.get('/api/teachers', async (req, res) => {
     try {
-        await sql.connect(config);
+        await sql.connect();
         const result = await sql.query`SELECT TeacherID, FullName, Specialization FROM Teacher ORDER BY FullName`;
         res.json({ success: true, teachers: result.recordset });
     } catch (err) {
@@ -702,7 +773,7 @@ app.post('/api/schedule', async (req, res) => {
     try {
         const { dayOfWeek, startTime, endTime, roomIdentifier, classId, teacherId, courseId } = req.body;
         
-        await sql.connect(config);
+        await sql.connect();
         
         await sql.query`
             INSERT INTO ScheduleItem (DayOfWeek, StartTime, EndTime, RoomIdentifier, ClassID, TeacherID, CourseID)
@@ -718,7 +789,7 @@ app.post('/api/schedule', async (req, res) => {
 // Get Student Schedule endpoint
 app.get('/api/student/:id/schedule', async (req, res) => {
     try {
-        await sql.connect(config);
+        await sql.connect();
         const studentId = req.params.id;
         
         // Retrieve student's class
@@ -757,12 +828,12 @@ app.get('/api/student/:id/schedule', async (req, res) => {
     }
 });
 
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
 // Get Admin Dashboard Stats
 app.get('/api/admin/dashboard-stats', async (req, res) => {
     try {
-        await sql.connect(config);
+        await sql.connect();
         const countsResult = await sql.query`
             SELECT 
                 (SELECT COUNT(*) FROM Student) AS totalStudents,
@@ -801,7 +872,7 @@ app.get('/api/admin/dashboard-stats', async (req, res) => {
 // Get classes taught by a teacher
 app.get('/api/teacher/:id/classes', async (req, res) => {
     try {
-        await sql.connect(config);
+        await sql.connect();
         const result = await sql.query`
             SELECT DISTINCT c.ClassID, c.ClassName 
             FROM ScheduleItem s 
@@ -817,7 +888,7 @@ app.get('/api/teacher/:id/classes', async (req, res) => {
 // Get courses taught by a teacher in a specific class
 app.get('/api/teacher/:id/courses/:classId', async (req, res) => {
     try {
-        await sql.connect(config);
+        await sql.connect();
         const result = await sql.query`
             SELECT DISTINCT c.CourseID, c.CourseName 
             FROM ScheduleItem s 
@@ -833,7 +904,7 @@ app.get('/api/teacher/:id/courses/:classId', async (req, res) => {
 // Get students in a specific class
 app.get('/api/classes/:classId/students', async (req, res) => {
     try {
-        await sql.connect(config);
+        await sql.connect();
         const result = await sql.query`
             SELECT StudentID, FullName 
             FROM Student 
@@ -850,7 +921,7 @@ app.get('/api/classes/:classId/students', async (req, res) => {
 app.get('/api/gradebook', async (req, res) => {
     try {
         const { classId, courseId, term, year } = req.query;
-        await sql.connect(config);
+        await sql.connect();
         const result = await sql.query`
             SELECT g.StudentID, g.RawMarks, g.GradeLetter 
             FROM GradeBookRecord g
@@ -870,7 +941,7 @@ app.get('/api/gradebook', async (req, res) => {
 app.post('/api/gradebook', async (req, res) => {
     try {
         const { term, year, courseId, grades } = req.body;
-        await sql.connect(config);
+        await sql.connect();
         const transaction = new sql.Transaction();
         await transaction.begin();
         try {
@@ -932,7 +1003,7 @@ app.post('/api/upload', upload.single('file'), (req, res) => {
 
 app.get('/api/guidebooks', async (req, res) => {
     try {
-        await sql.connect(config);
+        await sql.connect();
         const result = await sql.query`SELECT * FROM GuideBook ORDER BY BookID DESC`;
         res.json({ success: true, guidebooks: result.recordset });
     } catch (err) {
@@ -943,7 +1014,7 @@ app.get('/api/guidebooks', async (req, res) => {
 app.post('/api/guidebooks', async (req, res) => {
     try {
         const { title, subtitle, iconName, colorHex, fileUrl, category } = req.body;
-        await sql.connect(config);
+        await sql.connect();
         
         await sql.query`
             INSERT INTO GuideBook (Title, Subtitle, IconName, ColorHex, FileUrl, Category)
