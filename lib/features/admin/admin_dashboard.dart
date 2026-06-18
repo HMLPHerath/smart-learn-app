@@ -328,6 +328,11 @@ class _QuickActionsGrid extends StatelessWidget {
         'icon': Icons.campaign_outlined,
         'route': RouteNames.adminPostNotice,
       },
+      {
+        'title': 'Schedule Course',
+        'icon': Icons.edit_calendar_outlined,
+        'route': RouteNames.adminScheduleCourse,
+      },
     ];
 
     return GridView.builder(

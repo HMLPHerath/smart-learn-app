@@ -4,6 +4,7 @@ class CourseModel {
   final String teacherName;
   final String startTime;
   final String endTime;
+  final String dayOfWeek;
   final String status;
 
   CourseModel({
@@ -12,6 +13,7 @@ class CourseModel {
     required this.teacherName,
     required this.startTime,
     required this.endTime,
+    required this.dayOfWeek,
     required this.status,
   });
 
@@ -19,9 +21,10 @@ class CourseModel {
     return CourseModel(
       courseId: map['CourseID'] ?? map['courseId'] ?? '',
       title: map['CourseName'] ?? map['title'] ?? '',
-      teacherName: map['TeacherName'] ?? map['teacherName'] ?? '',
-      startTime: map['startTime'] ?? '',
-      endTime: map['endTime'] ?? '',
+      teacherName: map['InstructorName'] ?? map['TeacherName'] ?? map['teacherName'] ?? '',
+      startTime: map['StartTimeStr'] ?? map['startTime'] ?? '',
+      endTime: map['EndTimeStr'] ?? map['endTime'] ?? '',
+      dayOfWeek: map['DayOfWeek'] ?? map['dayOfWeek'] ?? '',
       status: map['status'] ?? '',
     );
   }
@@ -33,6 +36,7 @@ class CourseModel {
       'teacherName': teacherName,
       'startTime': startTime,
       'endTime': endTime,
+      'dayOfWeek': dayOfWeek,
       'status': status,
     };
   }

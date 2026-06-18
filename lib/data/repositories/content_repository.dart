@@ -29,6 +29,24 @@ class ContentRepository {
     }
   }
 
+  Future<List<CourseModel>> getStudentSchedule(String studentId) async {
+    final url = Uri.parse('${sqlService.windowsUrl}/api/student/$studentId/schedule');
+    try {
+      final response = await http.get(url);
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] == true && data['schedule'] != null) {
+          final List<dynamic> list = data['schedule'];
+          return list.map((item) => CourseModel.fromMap(item)).toList();
+        }
+      }
+      return [];
+    } catch (e) {
+      print("Error fetching student schedule: $e");
+      return [];
+    }
+  }
+
   Future<List<ScheduleModel>> getSchedules() async {
     return [];
   }

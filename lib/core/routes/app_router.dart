@@ -4,6 +4,7 @@ import '../../features/admin/add_parent_screen.dart';
 import '../../features/admin/add_teacher_screen.dart';
 import '../../features/admin/admin_shell.dart';
 import '../../features/admin/admin_student_screen.dart';
+import '../../features/admin/admin_add_course_schedule_screen.dart';
 import '../../features/admin/post_notice_screen.dart';
 import '../../features/admin/print_id_card_screen.dart';
 import '../../features/admin/student_success_screen.dart';
@@ -118,6 +119,10 @@ GoRouter buildAppRouter({required bool isWeb}) {
       GoRoute(
         path: RouteNames.adminPostNotice,
         builder: (context, state) => const PostNoticeScreen(),
+      ),
+      GoRoute(
+        path: RouteNames.adminScheduleCourse,
+        builder: (context, state) => const AdminAddCourseScheduleScreen(),
       ),
       GoRoute(
         path: RouteNames.adminSuccess,

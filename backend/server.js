@@ -482,6 +482,88 @@ app.get('/api/courses', async (req, res) => {
     }
 });
 
+// Get Classes endpoint
+app.get('/api/classes', async (req, res) => {
+    try {
+        await sql.connect(config);
+        const result = await sql.query`SELECT ClassID, ClassName FROM Class ORDER BY ClassName`;
+        res.json({ success: true, classes: result.recordset });
+    } catch (err) {
+        res.status(500).json({ success: false, message: 'Server error', error: err.message });
+    }
+});
+
+// Get Teachers endpoint
+app.get('/api/teachers', async (req, res) => {
+    try {
+        await sql.connect(config);
+        const result = await sql.query`SELECT TeacherID, FullName, Specialization FROM Teacher ORDER BY FullName`;
+        res.json({ success: true, teachers: result.recordset });
+    } catch (err) {
+        res.status(500).json({ success: false, message: 'Server error', error: err.message });
+    }
+});
+
+// Create Schedule Item endpoint
+app.post('/api/schedule', async (req, res) => {
+    try {
+        const { dayOfWeek, startTime, endTime, roomIdentifier, classId, teacherId, courseId } = req.body;
+        
+        await sql.connect(config);
+        
+        await sql.query`
+            INSERT INTO ScheduleItem (DayOfWeek, StartTime, EndTime, RoomIdentifier, ClassID, TeacherID, CourseID)
+            VALUES (${dayOfWeek}, ${startTime}, ${endTime}, ${roomIdentifier}, ${classId}, ${teacherId}, ${courseId})
+        `;
+        
+        res.json({ success: true, message: 'Schedule created successfully' });
+    } catch (err) {
+        res.status(500).json({ success: false, message: 'Server error', error: err.message });
+    }
+});
+
+// Get Student Schedule endpoint
+app.get('/api/student/:id/schedule', async (req, res) => {
+    try {
+        await sql.connect(config);
+        const studentId = req.params.id;
+        
+        // Retrieve student's class
+        const classResult = await sql.query`SELECT ClassID FROM Student WHERE StudentID = ${studentId}`;
+        if (classResult.recordset.length === 0) {
+            return res.status(404).json({ success: false, message: 'Student not found' });
+        }
+        
+        const classId = classResult.recordset[0].ClassID;
+        
+        // Get the schedule for that class
+        const result = await sql.query`
+            SELECT 
+                s.ScheduleID, s.DayOfWeek, 
+                CONVERT(varchar(15), CAST(s.StartTime AS TIME), 100) AS StartTimeStr, 
+                CONVERT(varchar(15), CAST(s.EndTime AS TIME), 100) AS EndTimeStr, 
+                s.RoomIdentifier, c.ClassID, c.ClassName, 
+                t.TeacherID, t.FullName AS InstructorName, 
+                co.CourseID, co.CourseName
+            FROM ScheduleItem s
+            INNER JOIN Class c ON s.ClassID = c.ClassID
+            INNER JOIN Teacher t ON s.TeacherID = t.TeacherID
+            INNER JOIN Course co ON s.CourseID = co.CourseID
+            WHERE s.ClassID = ${classId}
+            ORDER BY 
+                CASE s.DayOfWeek 
+                    WHEN 'Monday' THEN 1 WHEN 'Tuesday' THEN 2 WHEN 'Wednesday' THEN 3 
+                    WHEN 'Thursday' THEN 4 WHEN 'Friday' THEN 5 WHEN 'Saturday' THEN 6 WHEN 'Sunday' THEN 7 
+                END, 
+                s.StartTime
+        `;
+        
+        res.json({ success: true, schedule: result.recordset });
+    } catch (err) {
+        res.status(500).json({ success: false, message: 'Server error', error: err.message });
+    }
+});
+
 const PORT = 3000;
 
 // Get Admin Dashboard Stats

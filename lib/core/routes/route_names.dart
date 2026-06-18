@@ -23,5 +23,6 @@ class RouteNames {
   static const adminAddParent = '/admin/add-parent';
   static const adminAddTeacher = '/admin/add-teacher';
   static const adminPostNotice = '/admin/post-notice';
+  static const adminScheduleCourse = '/admin/schedule-course';
   static const adminSuccess = '/admin/success';
 }
