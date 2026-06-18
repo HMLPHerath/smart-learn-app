@@ -5,98 +5,154 @@ import '../../core/utils/logout_helper.dart';
 import '../../core/widgets/app_button.dart';
 import '../../core/widgets/circular_avatar.dart';
 import '../../core/widgets/top_blue_header.dart';
+import '../../di/injection.dart';
 
-class TeacherProfileScreen extends StatelessWidget {
+class TeacherProfileScreen extends StatefulWidget {
   const TeacherProfileScreen({super.key});
 
   @override
+  State<TeacherProfileScreen> createState() => _TeacherProfileScreenState();
+}
+
+class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
+  bool _loading = true;
+  Map<String, dynamic>? _profileData;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProfile();
+  }
+
+  Future<void> _loadProfile() async {
+    try {
+      final uid = authRepository.currentUser?.uid;
+      if (uid != null) {
+        final profile = await teacherRepository.getTeacherProfile(uid);
+        if (mounted) {
+          setState(() {
+            _profileData = profile;
+            _loading = false;
+          });
+        }
+      } else {
+        if (mounted) setState(() => _loading = false);
+      }
+    } catch (e) {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    // Extract fields with fallbacks
+    final fullName = _profileData?['FullName'] ?? 'Teacher Name';
+    final teacherId = _profileData?['TeacherID'] ?? authRepository.currentUser?.uid ?? 'TEA-UNKNOWN';
+    final specialization = _profileData?['Specialization'] ?? 'General Subject';
+    final assignedClasses = _profileData?['AssignedClasses'] ?? 'Not Assigned';
+    final email = _profileData?['Email'] ?? 'Not Available';
+    final phone = _profileData?['PhoneNumber'] ?? 'Not Available';
+    
+    // Stats
+    final stats = _profileData?['Stats'] ?? {};
+    final classCount = (stats['Classes'] ?? 0).toString().padLeft(2, '0');
+    final studentCount = (stats['Students'] ?? 0).toString();
+    final attendance = stats['Attendance'] ?? 'N/A';
+    final avgMarks = stats['AvgMarks'] ?? 'N/A';
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.only(bottom: 28),
-          child: Column(
-            children: [
-              TopBlueHeader(
-                height: 285,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: const [
-                    CircularAvatar(radius: 48),
-                    SizedBox(height: 14),
-                    Text(
-                      'Mr. Nuwan Silva',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 24,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    SizedBox(height: 4),
-                    Text(
-                      'TEA-2026-0001 • ICT Teacher',
-                      style: TextStyle(color: Colors.white70, fontSize: 14),
-                    ),
-                  ],
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(18),
+        child: _loading
+            ? const Center(child: CircularProgressIndicator(color: AppColors.primaryBlue))
+            : SingleChildScrollView(
+                padding: const EdgeInsets.only(bottom: 28),
                 child: Column(
                   children: [
-                    const ProfileInfoCard(
-                      title: 'Full Name',
-                      value: 'Mr. Nuwan Silva',
-                      icon: Icons.person_outline_rounded,
+                    TopBlueHeader(
+                      height: 285,
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          const CircularAvatar(radius: 48),
+                          const SizedBox(height: 14),
+                          Text(
+                            fullName,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 24,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            '$teacherId • $specialization',
+                            style: const TextStyle(color: Colors.white70, fontSize: 14),
+                          ),
+                        ],
+                      ),
                     ),
-                    const SizedBox(height: 14),
-                    const ProfileInfoCard(
-                      title: 'Teacher ID',
-                      value: 'TEA-2026-0001',
-                      icon: Icons.badge_outlined,
-                    ),
-                    const SizedBox(height: 14),
-                    const ProfileInfoCard(
-                      title: 'Subject',
-                      value: 'Information & Communication Technology',
-                      icon: Icons.menu_book_outlined,
-                    ),
-                    const SizedBox(height: 14),
-                    const ProfileInfoCard(
-                      title: 'Assigned Class',
-                      value: 'Grade 11-B',
-                      icon: Icons.school_outlined,
-                    ),
-                    const SizedBox(height: 14),
-                    const ProfileInfoCard(
-                      title: 'Email',
-                      value: 'teacher@smartedu.com',
-                      icon: Icons.mail_outline_rounded,
-                    ),
-                    const SizedBox(height: 14),
-                    const ProfileInfoCard(
-                      title: 'Phone Number',
-                      value: '+94 77 987 6543',
-                      icon: Icons.phone_outlined,
-                    ),
-                    const SizedBox(height: 18),
-                    const TeacherStatsSection(),
-                    const SizedBox(height: 18),
-                    const SettingsSection(),
-                    const SizedBox(height: 20),
-                    AppButton(
-                      text: 'Logout',
-                      backgroundColor: const Color(0xFFF0C7C7),
-                      textColor: AppColors.textBlack,
-                      onTap: () => LogoutHelper.logout(context),
+                    Padding(
+                      padding: const EdgeInsets.all(18),
+                      child: Column(
+                        children: [
+                          ProfileInfoCard(
+                            title: 'Full Name',
+                            value: fullName,
+                            icon: Icons.person_outline_rounded,
+                          ),
+                          const SizedBox(height: 14),
+                          ProfileInfoCard(
+                            title: 'Teacher ID',
+                            value: teacherId,
+                            icon: Icons.badge_outlined,
+                          ),
+                          const SizedBox(height: 14),
+                          ProfileInfoCard(
+                            title: 'Subject / Specialization',
+                            value: specialization,
+                            icon: Icons.menu_book_outlined,
+                          ),
+                          const SizedBox(height: 14),
+                          ProfileInfoCard(
+                            title: 'Assigned Classes',
+                            value: assignedClasses,
+                            icon: Icons.school_outlined,
+                          ),
+                          const SizedBox(height: 14),
+                          ProfileInfoCard(
+                            title: 'Email',
+                            value: email,
+                            icon: Icons.mail_outline_rounded,
+                          ),
+                          const SizedBox(height: 14),
+                          ProfileInfoCard(
+                            title: 'Phone Number',
+                            value: phone,
+                            icon: Icons.phone_outlined,
+                          ),
+                          const SizedBox(height: 18),
+                          TeacherStatsSection(
+                            classCount: classCount,
+                            studentCount: studentCount,
+                            attendance: attendance,
+                            avgMarks: avgMarks,
+                          ),
+                          const SizedBox(height: 18),
+                          const SettingsSection(),
+                          const SizedBox(height: 20),
+                          AppButton(
+                            text: 'Logout',
+                            backgroundColor: const Color(0xFFF0C7C7),
+                            textColor: AppColors.textBlack,
+                            onTap: () => LogoutHelper.logout(context),
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
               ),
-            ],
-          ),
-        ),
       ),
     );
   }
@@ -181,7 +237,18 @@ class ProfileInfoCard extends StatelessWidget {
 ////////////////////////////////////////////////////////////
 
 class TeacherStatsSection extends StatelessWidget {
-  const TeacherStatsSection({super.key});
+  final String classCount;
+  final String studentCount;
+  final String attendance;
+  final String avgMarks;
+
+  const TeacherStatsSection({
+    super.key,
+    required this.classCount,
+    required this.studentCount,
+    required this.attendance,
+    required this.avgMarks,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -202,8 +269,8 @@ class TeacherStatsSection extends StatelessWidget {
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: const [
-          Text(
+        children: [
+          const Text(
             'Teaching Summary',
             style: TextStyle(
               fontSize: 17,
@@ -211,20 +278,20 @@ class TeacherStatsSection extends StatelessWidget {
               color: AppColors.textBlack,
             ),
           ),
-          SizedBox(height: 14),
+          const SizedBox(height: 14),
           Row(
             children: [
-              Expanded(child: MiniStatCard(title: 'Classes', value: '04', icon: Icons.class_outlined)),
-              SizedBox(width: 12),
-              Expanded(child: MiniStatCard(title: 'Students', value: '128', icon: Icons.groups_outlined)),
+              Expanded(child: MiniStatCard(title: 'Classes', value: classCount, icon: Icons.class_outlined)),
+              const SizedBox(width: 12),
+              Expanded(child: MiniStatCard(title: 'Students', value: studentCount, icon: Icons.groups_outlined)),
             ],
           ),
-          SizedBox(height: 12),
+          const SizedBox(height: 12),
           Row(
             children: [
-              Expanded(child: MiniStatCard(title: 'Attendance', value: '96%', icon: Icons.fact_check_outlined)),
-              SizedBox(width: 12),
-              Expanded(child: MiniStatCard(title: 'Avg Marks', value: '82%', icon: Icons.auto_graph_outlined)),
+              Expanded(child: MiniStatCard(title: 'Attendance', value: attendance, icon: Icons.fact_check_outlined)),
+              const SizedBox(width: 12),
+              Expanded(child: MiniStatCard(title: 'Avg Marks', value: avgMarks, icon: Icons.auto_graph_outlined)),
             ],
           ),
         ],

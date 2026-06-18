@@ -42,6 +42,23 @@ class TeacherRepository {
     }
   }
 
+  Future<Map<String, dynamic>?> getTeacherProfile(String teacherId) async {
+    final url = Uri.parse('${sqlService.windowsUrl}/api/teacher/$teacherId/profile');
+    try {
+      final response = await http.get(url);
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] == true && data['profile'] != null) {
+          return data['profile'] as Map<String, dynamic>;
+        }
+      }
+      return null;
+    } catch (e) {
+      print("Error fetching teacher profile: $e");
+      return null;
+    }
+  }
+
   Future<bool> addTeacher(Map<String, dynamic> teacherData) async {
     final url = Uri.parse('${sqlService.windowsUrl}/api/teachers');
     try {

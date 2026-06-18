@@ -210,6 +210,60 @@ app.get('/api/student/:id/profile', async (req, res) => {
     }
 });
 
+// Get Teacher Profile
+app.get('/api/teacher/:id/profile', async (req, res) => {
+    try {
+        const teacherId = req.params.id;
+        await sql.connect(config);
+        
+        const result = await sql.query`
+            SELECT 
+                t.TeacherID, t.FullName, t.Specialization,
+                u.Email, u.PhoneNumber, u.ProfilePictureURI
+            FROM Teacher t
+            JOIN [User] u ON t.TeacherID = u.UserID
+            WHERE t.TeacherID = ${teacherId}
+        `;
+        
+        if (result.recordset.length > 0) {
+            const profile = result.recordset[0];
+            
+            // Get classes taught by teacher
+            const classResult = await sql.query`
+                SELECT DISTINCT c.ClassName
+                FROM ScheduleItem s
+                JOIN Class c ON s.ClassID = c.ClassID
+                WHERE s.TeacherID = ${teacherId}
+            `;
+            
+            profile.AssignedClasses = classResult.recordset.map(c => c.ClassName).join(', ') || 'Not Assigned';
+            
+            // Get stats (Classes count, Students count)
+            const statsResult = await sql.query`
+                SELECT 
+                    COUNT(DISTINCT s.ClassID) as ClassCount,
+                    COUNT(DISTINCT st.StudentID) as StudentCount
+                FROM ScheduleItem s
+                LEFT JOIN Student st ON s.ClassID = st.ClassID
+                WHERE s.TeacherID = ${teacherId}
+            `;
+            
+            profile.Stats = {
+                Classes: statsResult.recordset[0].ClassCount,
+                Students: statsResult.recordset[0].StudentCount,
+                Attendance: '96%', // Mocked for now
+                AvgMarks: '82%' // Mocked for now
+            };
+            
+            res.json({ success: true, profile: profile });
+        } else {
+            res.status(404).json({ success: false, message: 'Teacher not found' });
+        }
+    } catch (err) {
+        res.status(500).json({ success: false, message: 'Server error', error: err.message });
+    }
+});
+
 // Get Student by ID
 app.get('/api/students/:id', async (req, res) => {
     try {
