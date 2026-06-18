@@ -17,7 +17,7 @@ class ParentDashboardScreen extends StatefulWidget {
 
 class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
   bool _loading = true;
-  ParentModel? _parent;
+  Map<String, dynamic>? _profileData;
 
   @override
   void initState() {
@@ -29,11 +29,11 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
     try {
       final uid = authRepository.currentUser?.uid;
       if (uid != null) {
-        final parent = await parentRepository.getParentById(uid);
+        final profile = await parentRepository.getParentProfile(uid);
         
         if (mounted) {
           setState(() {
-            _parent = parent;
+            _profileData = profile;
             _loading = false;
           });
         }
@@ -49,13 +49,14 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
   Widget build(BuildContext context) {
     if (_loading) {
       return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
+        body: Center(child: CircularProgressIndicator(color: AppColors.primaryBlue)),
       );
     }
 
-    final name = _parent?.fullName ?? 'Parent';
-    final childName = _parent?.childName ?? 'Child';
-    final childClass = _parent?.className ?? 'Class';
+    final name = _profileData?['FullName'] ?? 'Parent';
+    final childName = _profileData?['ChildName'] ?? 'Child';
+    final childClass = _profileData?['ChildClass'] ?? 'Class';
+    final childId = _profileData?['ChildStudentID'] ?? '';
 
     return Scaffold(
       body: SingleChildScrollView(
@@ -109,9 +110,9 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
               child: Column(
                 children: [
                   _StudentHeroCard(
-                    childName: _parent?.childName ?? '',
-                    childClass: _parent?.className ?? '',
-                    childId: _parent?.childStudentId ?? '',
+                    childName: childName,
+                    childClass: childClass,
+                    childId: childId,
                   ),
                   const SizedBox(height: 18),
                   const _ParentQuickActions(),
