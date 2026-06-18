@@ -438,6 +438,120 @@ app.get('/api/admin/dashboard-stats', async (req, res) => {
     }
 });
 
+// --- GRADEBOOK ENDPOINTS ---
+
+// Get classes taught by a teacher
+app.get('/api/teacher/:id/classes', async (req, res) => {
+    try {
+        await sql.connect(config);
+        const result = await sql.query`
+            SELECT DISTINCT c.ClassID, c.ClassName 
+            FROM ScheduleItem s 
+            JOIN Class c ON s.ClassID = c.ClassID 
+            WHERE s.TeacherID = ${req.params.id}
+        `;
+        res.json({ success: true, classes: result.recordset });
+    } catch (err) {
+        res.status(500).json({ success: false, message: 'Server error', error: err.message });
+    }
+});
+
+// Get courses taught by a teacher in a specific class
+app.get('/api/teacher/:id/courses/:classId', async (req, res) => {
+    try {
+        await sql.connect(config);
+        const result = await sql.query`
+            SELECT DISTINCT c.CourseID, c.CourseName 
+            FROM ScheduleItem s 
+            JOIN Course c ON s.CourseID = c.CourseID 
+            WHERE s.TeacherID = ${req.params.id} AND s.ClassID = ${req.params.classId}
+        `;
+        res.json({ success: true, courses: result.recordset });
+    } catch (err) {
+        res.status(500).json({ success: false, message: 'Server error', error: err.message });
+    }
+});
+
+// Get students in a specific class
+app.get('/api/classes/:classId/students', async (req, res) => {
+    try {
+        await sql.connect(config);
+        const result = await sql.query`
+            SELECT StudentID, FullName 
+            FROM Student 
+            WHERE ClassID = ${req.params.classId}
+            ORDER BY FullName ASC
+        `;
+        res.json({ success: true, students: result.recordset });
+    } catch (err) {
+        res.status(500).json({ success: false, message: 'Server error', error: err.message });
+    }
+});
+
+// Get grades for a specific class, course, term, and year
+app.get('/api/gradebook', async (req, res) => {
+    try {
+        const { classId, courseId, term, year } = req.query;
+        await sql.connect(config);
+        const result = await sql.query`
+            SELECT g.StudentID, g.RawMarks, g.GradeLetter 
+            FROM GradeBookRecord g
+            JOIN Student s ON g.StudentID = s.StudentID
+            WHERE s.ClassID = ${classId} 
+              AND g.CourseID = ${courseId} 
+              AND g.AcademicTerm = ${term} 
+              AND g.AcademicYear = ${year}
+        `;
+        res.json({ success: true, grades: result.recordset });
+    } catch (err) {
+        res.status(500).json({ success: false, message: 'Server error', error: err.message });
+    }
+});
+
+// Save (upsert) grades
+app.post('/api/gradebook', async (req, res) => {
+    try {
+        const { term, year, courseId, grades } = req.body;
+        await sql.connect(config);
+        const transaction = new sql.Transaction();
+        await transaction.begin();
+        try {
+            for (const grade of grades) {
+                const request = new sql.Request(transaction);
+                const exists = await request.query`
+                    SELECT RecordID FROM GradeBookRecord 
+                    WHERE StudentID = ${grade.studentId} 
+                      AND CourseID = ${courseId} 
+                      AND AcademicTerm = ${term} 
+                      AND AcademicYear = ${year}
+                `;
+                
+                if (exists.recordset.length > 0) {
+                    const updateReq = new sql.Request(transaction);
+                    await updateReq.query`
+                        UPDATE GradeBookRecord 
+                        SET RawMarks = ${grade.marks}, GradeLetter = ${grade.gradeLetter}
+                        WHERE RecordID = ${exists.recordset[0].RecordID}
+                    `;
+                } else {
+                    const insertReq = new sql.Request(transaction);
+                    await insertReq.query`
+                        INSERT INTO GradeBookRecord (RawMarks, GradeLetter, AcademicTerm, AcademicYear, StudentID, CourseID)
+                        VALUES (${grade.marks}, ${grade.gradeLetter}, ${term}, ${year}, ${grade.studentId}, ${courseId})
+                    `;
+                }
+            }
+            await transaction.commit();
+            res.json({ success: true, message: 'Grades saved successfully' });
+        } catch (err) {
+            await transaction.rollback();
+            throw err;
+        }
+    } catch (err) {
+        res.status(500).json({ success: false, message: 'Server error', error: err.message });
+    }
+});
+
 app.listen(PORT, () => {
     console.log(`Backend API running at http://localhost:${PORT}`);
 });
