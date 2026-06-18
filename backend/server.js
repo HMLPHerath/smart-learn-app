@@ -158,7 +158,27 @@ app.get('/api/students/:id', async (req, res) => {
     try {
         await sql.connect(config);
         const result = await sql.query`
-            SELECT s.*, u.Email, u.PhoneNumber, u.AccountStatus, u.ProfilePictureURI 
+            SELECT s.*, u.Email, u.PhoneNumber, u.AccountStatus, u.ProfilePictureURI,
+                ISNULL((
+                    SELECT CAST(AVG(CASE GradeLetter
+                        WHEN 'A+' THEN 4.0
+                        WHEN 'A'  THEN 4.0
+                        WHEN 'B+' THEN 3.5
+                        WHEN 'B'  THEN 3.0
+                        WHEN 'C+' THEN 2.5
+                        WHEN 'C'  THEN 2.0
+                        WHEN 'S'  THEN 1.0
+                        WHEN 'F'  THEN 0.0
+                        ELSE 0.0
+                    END) AS DECIMAL(5,2))
+                    FROM GradeBookRecord 
+                    WHERE StudentID = s.StudentID
+                ), 0.0) AS gpa,
+                ISNULL((
+                    SELECT CAST(SUM(CASE WHEN IsPresent = 1 THEN 1 ELSE 0 END) * 100.0 / COUNT(*) AS INT)
+                    FROM Attendance
+                    WHERE StudentID = s.StudentID
+                ), 0) AS attendanceRate
             FROM Student s 
             JOIN [User] u ON s.StudentID = u.UserID
             WHERE s.StudentID = ${req.params.id}
