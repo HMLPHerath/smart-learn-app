@@ -8,6 +8,7 @@ const pool = new Pool({
 });
 
 const sql = {
+    connect: async () => {}, // Dummy connect for compatibility
     async query(strings, ...values) {
         let text = typeof strings === 'string' ? strings : strings[0];
         let vals = values;
