@@ -178,6 +178,38 @@ app.get('/api/students', async (req, res) => {
     }
 });
 
+// Get Student Profile
+app.get('/api/student/:id/profile', async (req, res) => {
+    try {
+        const studentId = req.params.id;
+        await sql.connect(config);
+        
+        const result = await sql.query`
+            SELECT 
+                s.StudentID, s.FullName, s.ClassID, s.ParentID, 
+                u.Email, u.PhoneNumber, u.ProfilePictureURI,
+                c.ClassName,
+                p.FullName AS ParentName
+            FROM Student s
+            JOIN [User] u ON s.StudentID = u.UserID
+            LEFT JOIN Class c ON s.ClassID = c.ClassID
+            LEFT JOIN Parent p ON s.ParentID = p.ParentID
+            WHERE s.StudentID = ${studentId}
+        `;
+        
+        if (result.recordset.length > 0) {
+            // Mocking attendance to 98% for now, as there isn't an attendance table logic defined here easily.
+            const profile = result.recordset[0];
+            profile.Attendance = '98%'; 
+            res.json({ success: true, profile: profile });
+        } else {
+            res.status(404).json({ success: false, message: 'Student not found' });
+        }
+    } catch (err) {
+        res.status(500).json({ success: false, message: 'Server error', error: err.message });
+    }
+});
+
 // Get Student by ID
 app.get('/api/students/:id', async (req, res) => {
     try {
