@@ -5,96 +5,141 @@ import '../../core/utils/logout_helper.dart';
 import '../../core/widgets/app_button.dart';
 import '../../core/widgets/circular_avatar.dart';
 import '../../core/widgets/top_blue_header.dart';
+import '../../di/injection.dart';
 
-class ParentProfileScreen extends StatelessWidget {
+class ParentProfileScreen extends StatefulWidget {
   const ParentProfileScreen({super.key});
 
   @override
+  State<ParentProfileScreen> createState() => _ParentProfileScreenState();
+}
+
+class _ParentProfileScreenState extends State<ParentProfileScreen> {
+  bool _loading = true;
+  Map<String, dynamic>? _profileData;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProfile();
+  }
+
+  Future<void> _loadProfile() async {
+    try {
+      final uid = authRepository.currentUser?.uid;
+      if (uid != null) {
+        final profile = await parentRepository.getParentProfile(uid);
+        if (mounted) {
+          setState(() {
+            _profileData = profile;
+            _loading = false;
+          });
+        }
+      } else {
+        if (mounted) setState(() => _loading = false);
+      }
+    } catch (e) {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    // Extract fields with fallbacks
+    final fullName = _profileData?['FullName'] ?? 'Parent Name';
+    final parentId = _profileData?['ParentID'] ?? authRepository.currentUser?.uid ?? 'PAR-UNKNOWN';
+    final childName = _profileData?['ChildName'] ?? 'Not Assigned';
+    final childStudentId = _profileData?['ChildStudentID'] ?? 'N/A';
+    final childClass = _profileData?['ChildClass'] ?? 'N/A';
+    final email = _profileData?['Email'] ?? 'Not Available';
+    final phone = _profileData?['PhoneNumber'] ?? 'Not Available';
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.only(bottom: 28),
-          child: Column(
-            children: [
-              TopBlueHeader(
-                height: 285,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: const [
-                    CircularAvatar(radius: 48),
-                    SizedBox(height: 14),
-                    Text(
-                      'Sewwandi Perera',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 24,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    SizedBox(height: 4),
-                    Text(
-                      'PAR-2026-0001',
-                      style: TextStyle(color: Colors.white70, fontSize: 14),
-                    ),
-                  ],
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(18),
+        child: _loading
+            ? const Center(child: CircularProgressIndicator(color: AppColors.primaryBlue))
+            : SingleChildScrollView(
+                padding: const EdgeInsets.only(bottom: 28),
                 child: Column(
                   children: [
-                    const _ProfileInfoCard(
-                      title: 'Full Name',
-                      value: 'Sewwandi Perera',
-                      icon: Icons.person_outline_rounded,
+                    TopBlueHeader(
+                      height: 285,
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          const CircularAvatar(radius: 48),
+                          const SizedBox(height: 14),
+                          Text(
+                            fullName,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 24,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            parentId,
+                            style: const TextStyle(color: Colors.white70, fontSize: 14),
+                          ),
+                        ],
+                      ),
                     ),
-                    const SizedBox(height: 14),
-                    const _ProfileInfoCard(
-                      title: 'Child Name',
-                      value: 'Aruja Wirarathna',
-                      icon: Icons.child_care_outlined,
-                    ),
-                    const SizedBox(height: 14),
-                    const _ProfileInfoCard(
-                      title: 'Student ID',
-                      value: 'STU-2026-0001',
-                      icon: Icons.badge_outlined,
-                    ),
-                    const SizedBox(height: 14),
-                    const _ProfileInfoCard(
-                      title: 'Class',
-                      value: 'Grade 11-B',
-                      icon: Icons.school_outlined,
-                    ),
-                    const SizedBox(height: 14),
-                    const _ProfileInfoCard(
-                      title: 'Email',
-                      value: 'parent@smartedu.com',
-                      icon: Icons.mail_outline_rounded,
-                    ),
-                    const SizedBox(height: 14),
-                    const _ProfileInfoCard(
-                      title: 'Phone Number',
-                      value: '+94 77 123 4567',
-                      icon: Icons.phone_outlined,
-                    ),
-                    const SizedBox(height: 18),
-                    const _SettingsSection(),
-                    const SizedBox(height: 20),
-                    AppButton(
-                      text: 'Logout',
-                      backgroundColor: const Color(0xFFF0C7C7),
-                      textColor: AppColors.textBlack,
-                      onTap: () => LogoutHelper.logout(context),
+                    Padding(
+                      padding: const EdgeInsets.all(18),
+                      child: Column(
+                        children: [
+                          _ProfileInfoCard(
+                            title: 'Full Name',
+                            value: fullName,
+                            icon: Icons.person_outline_rounded,
+                          ),
+                          const SizedBox(height: 14),
+                          _ProfileInfoCard(
+                            title: 'Child Name',
+                            value: childName,
+                            icon: Icons.face_retouching_natural_rounded,
+                          ),
+                          const SizedBox(height: 14),
+                          _ProfileInfoCard(
+                            title: 'Student ID',
+                            value: childStudentId,
+                            icon: Icons.badge_outlined,
+                          ),
+                          const SizedBox(height: 14),
+                          _ProfileInfoCard(
+                            title: 'Class',
+                            value: childClass,
+                            icon: Icons.school_outlined,
+                          ),
+                          const SizedBox(height: 14),
+                          _ProfileInfoCard(
+                            title: 'Email',
+                            value: email,
+                            icon: Icons.mail_outline_rounded,
+                          ),
+                          const SizedBox(height: 14),
+                          _ProfileInfoCard(
+                            title: 'Phone Number',
+                            value: phone,
+                            icon: Icons.phone_outlined,
+                          ),
+                          const SizedBox(height: 18),
+                          const _SettingsSection(),
+                          const SizedBox(height: 20),
+                          AppButton(
+                            text: 'Logout',
+                            backgroundColor: const Color(0xFFF0C7C7),
+                            textColor: AppColors.textBlack,
+                            onTap: () => LogoutHelper.logout(context),
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
               ),
-            ],
-          ),
-        ),
       ),
     );
   }
@@ -174,88 +219,85 @@ class _SettingsSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final items = [
-      {'title': 'Edit Profile', 'icon': Icons.edit_outlined},
-      {'title': 'Child Progress', 'icon': Icons.bar_chart_outlined},
-      {'title': 'Messages', 'icon': Icons.chat_bubble_outline},
-      {'title': 'Help & Support', 'icon': Icons.help_outline_rounded},
-    ];
-
     return Container(
-      width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.borderBlue, width: 1.2),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x12000000),
-            blurRadius: 10,
-            offset: Offset(0, 4),
-          ),
-        ],
+        border: Border.all(color: AppColors.borderSoft),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Account Settings',
+            'Settings & Preferences',
             style: TextStyle(
-              fontSize: 17,
+              fontSize: 16,
               fontWeight: FontWeight.w700,
               color: AppColors.textBlack,
             ),
           ),
-          const SizedBox(height: 14),
-          ...items.asMap().entries.map((entry) {
-            final index = entry.key;
-            final item = entry.value;
-
-            return Container(
-              margin: EdgeInsets.only(
-                bottom: index == items.length - 1 ? 0 : 12,
-              ),
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF9F9F9),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppColors.borderSoft),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 42,
-                    height: 42,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFD7DDF4),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(
-                      item['icon']! as IconData,
-                      color: AppColors.primaryBlue,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      item['title']! as String,
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.textBlack,
-                      ),
-                    ),
-                  ),
-                  const Icon(
-                    Icons.chevron_right_rounded,
-                    color: AppColors.primaryBlue,
-                  ),
-                ],
-              ),
-            );
-          }),
+          const SizedBox(height: 12),
+          _SettingTile(
+            title: 'Edit Profile',
+            icon: Icons.edit_outlined,
+            onTap: () {},
+          ),
+          const Divider(color: AppColors.borderSoft, height: 24),
+          _SettingTile(
+            title: 'Change Password',
+            icon: Icons.lock_outline_rounded,
+            onTap: () {},
+          ),
+          const Divider(color: AppColors.borderSoft, height: 24),
+          _SettingTile(
+            title: 'App Notifications',
+            icon: Icons.notifications_none_rounded,
+            onTap: () {},
+          ),
         ],
+      ),
+    );
+  }
+}
+
+class _SettingTile extends StatelessWidget {
+  final String title;
+  final IconData icon;
+  final VoidCallback onTap;
+
+  const _SettingTile({
+    required this.title,
+    required this.icon,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Row(
+          children: [
+            Icon(icon, color: AppColors.textBlack, size: 22),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textBlack,
+                ),
+              ),
+            ),
+            const Icon(
+              Icons.chevron_right_rounded,
+              color: AppColors.mutedText,
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -264,6 +264,35 @@ app.get('/api/teacher/:id/profile', async (req, res) => {
     }
 });
 
+// Get Parent Profile
+app.get('/api/parent/:id/profile', async (req, res) => {
+    try {
+        const parentId = req.params.id;
+        await sql.connect(config);
+        
+        const result = await sql.query`
+            SELECT 
+                p.ParentID, p.FullName, 
+                u.Email, u.PhoneNumber, u.ProfilePictureURI,
+                s.FullName AS ChildName, s.StudentID AS ChildStudentID,
+                c.ClassName AS ChildClass
+            FROM Parent p
+            JOIN [User] u ON p.ParentID = u.UserID
+            LEFT JOIN Student s ON p.ParentID = s.ParentID
+            LEFT JOIN Class c ON s.ClassID = c.ClassID
+            WHERE p.ParentID = ${parentId}
+        `;
+        
+        if (result.recordset.length > 0) {
+            res.json({ success: true, profile: result.recordset[0] });
+        } else {
+            res.status(404).json({ success: false, message: 'Parent not found' });
+        }
+    } catch (err) {
+        res.status(500).json({ success: false, message: 'Server error', error: err.message });
+    }
+});
+
 // Get Student by ID
 app.get('/api/students/:id', async (req, res) => {
     try {
