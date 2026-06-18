@@ -1,113 +1,170 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/widgets/top_blue_header.dart';
+import '../../data/models/course_model.dart';
+import '../../di/injection.dart';
 
-class StudentScheduleScreen extends StatelessWidget {
+class StudentScheduleScreen extends StatefulWidget {
   const StudentScheduleScreen({super.key});
 
   @override
+  State<StudentScheduleScreen> createState() => _StudentScheduleScreenState();
+}
+
+class _StudentScheduleScreenState extends State<StudentScheduleScreen> {
+  bool _loading = true;
+  List<CourseModel> _allCourses = [];
+  
+  late DateTime _selectedDate;
+  late List<DateTime> _weekDates;
+
+  @override
+  void initState() {
+    super.initState();
+    _initDates();
+    _loadSchedule();
+  }
+
+  void _initDates() {
+    final now = DateTime.now();
+    _selectedDate = now;
+    // Calculate Monday of current week
+    final int currentWeekday = now.weekday; // 1 = Monday, 7 = Sunday
+    final DateTime monday = now.subtract(Duration(days: currentWeekday - 1));
+    
+    _weekDates = List.generate(5, (index) => monday.add(Duration(days: index))); 
+  }
+
+  Future<void> _loadSchedule() async {
+    try {
+      final uid = authRepository.currentUser?.uid;
+      if (uid != null) {
+        final courses = await contentRepository.getStudentSchedule(uid);
+        if (mounted) {
+          setState(() {
+            _allCourses = courses;
+            _loading = false;
+          });
+        }
+      } else {
+        if (mounted) setState(() => _loading = false);
+      }
+    } catch (e) {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  String _getCourseStatus(CourseModel course, DateTime selectedDate) {
+    final now = DateTime.now();
+    // Only calculate 'NOW', 'ENDED', 'NEXT' if selected date is today
+    if (selectedDate.year == now.year && selectedDate.month == now.month && selectedDate.day == now.day) {
+      try {
+        final startTime = DateFormat("hh:mma").parse(course.startTime.replaceAll(' ', ''));
+        final endTime = DateFormat("hh:mma").parse(course.endTime.replaceAll(' ', ''));
+        
+        final nowTime = DateTime(1970, 1, 1, now.hour, now.minute);
+        final sTime = DateTime(1970, 1, 1, startTime.hour, startTime.minute);
+        final eTime = DateTime(1970, 1, 1, endTime.hour, endTime.minute);
+        
+        if (nowTime.isAfter(sTime) && nowTime.isBefore(eTime)) return 'NOW';
+        if (nowTime.isAfter(eTime)) return 'ENDED';
+        if (nowTime.isBefore(sTime)) return 'NEXT';
+      } catch(e) {}
+    }
+    return 'UPCOMING';
+  }
+
+  Color _getColorForStatus(String status) {
+    if (status == 'NOW') return const Color(0xFFCBE8C7);
+    if (status == 'ENDED') return const Color(0xFFF5DE9B);
+    if (status == 'NEXT') return const Color(0xFFD7DDF4);
+    return const Color(0xFFE2E8F0);
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final schedule = [
-      {
-        'subject': 'Mathematics',
-        'teacher': 'Mrs. Dilki Perera',
-        'time': '08.00 AM - 09.00 AM',
-        'status': 'ENDED',
-        'chipColor': const Color(0xFFF5DE9B),
-      },
-      {
-        'subject': 'ICT Lab',
-        'teacher': 'Mr. Nuwan Silva',
-        'time': '10.00 AM - 11.30 AM',
-        'status': 'NOW',
-        'chipColor': const Color(0xFFCBE8C7),
-      },
-      {
-        'subject': 'Science',
-        'teacher': 'Mr. Rukshan Fernando',
-        'time': '01.00 PM - 02.00 PM',
-        'status': 'NEXT',
-        'chipColor': const Color(0xFFD7DDF4),
-      },
-      {
-        'subject': 'English',
-        'teacher': 'Mrs. Anoma Jayasuriya',
-        'time': '03.00 PM - 04.00 PM',
-        'status': 'LAB',
-        'chipColor': const Color(0xFFD7DDF4),
-      },
-    ];
+    final selectedDayString = DateFormat('EEEE').format(_selectedDate); 
+    
+    // Filter courses for selected day
+    final dayCourses = _allCourses.where((c) => c.dayOfWeek == selectedDayString).toList();
 
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.only(bottom: 28),
-          child: Column(
-            children: [
-              TopBlueHeader(
-                height: 230,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: const [
-                    Text(
-                      'Schedule',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 30,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    SizedBox(height: 6),
-                    Text(
-                      'Today • Monday',
-                      style: TextStyle(color: Colors.white70, fontSize: 15),
-                    ),
-                  ],
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(18),
+        child: _loading
+            ? const Center(child: CircularProgressIndicator(color: AppColors.primaryBlue))
+            : SingleChildScrollView(
+                padding: const EdgeInsets.only(bottom: 28),
                 child: Column(
                   children: [
-                    const _DateSelectorRow(),
-                    const SizedBox(height: 18),
-                    ...schedule.map(
-                      (item) => _ScheduleTimelineTile(
-                        subject: item['subject']! as String,
-                        teacher: item['teacher']! as String,
-                        time: item['time']! as String,
-                        status: item['status']! as String,
-                        chipColor: item['chipColor']! as Color,
+                    TopBlueHeader(
+                      height: 230,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          const Text(
+                            'Schedule',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 30,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            'Today • ${DateFormat('EEEE').format(DateTime.now())}',
+                            style: const TextStyle(color: Colors.white70, fontSize: 15),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.all(18),
+                      child: Column(
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: _weekDates.map((date) {
+                              final isSelected = date.year == _selectedDate.year && 
+                                                 date.month == _selectedDate.month && 
+                                                 date.day == _selectedDate.day;
+                              return GestureDetector(
+                                onTap: () => setState(() => _selectedDate = date),
+                                child: _DateChip(
+                                  day: DateFormat('EEE').format(date),
+                                  date: DateFormat('d').format(date),
+                                  selected: isSelected,
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                          const SizedBox(height: 18),
+                          if (dayCourses.isEmpty)
+                            const Padding(
+                              padding: EdgeInsets.only(top: 40),
+                              child: Text('No classes scheduled for this day.', style: TextStyle(color: AppColors.mutedText)),
+                            ),
+                          ...dayCourses.map((course) {
+                            final status = _getCourseStatus(course, _selectedDate);
+                            return _ScheduleTimelineTile(
+                              subject: course.title,
+                              teacher: course.teacherName,
+                              time: '${course.startTime} - ${course.endTime}',
+                              status: status,
+                              chipColor: _getColorForStatus(status),
+                              room: course.roomIdentifier.isNotEmpty ? course.roomIdentifier : 'Class Room / Lab',
+                            );
+                          }).toList(),
+                        ],
                       ),
                     ),
                   ],
                 ),
               ),
-            ],
-          ),
-        ),
       ),
-    );
-  }
-}
-
-class _DateSelectorRow extends StatelessWidget {
-  const _DateSelectorRow();
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: const [
-        _DateChip(day: 'Mon', date: '12', selected: true),
-        _DateChip(day: 'Tue', date: '13'),
-        _DateChip(day: 'Wed', date: '14'),
-        _DateChip(day: 'Thu', date: '15'),
-        _DateChip(day: 'Fri', date: '16'),
-      ],
     );
   }
 }
@@ -172,6 +229,7 @@ class _ScheduleTimelineTile extends StatelessWidget {
   final String time;
   final String status;
   final Color chipColor;
+  final String room;
 
   const _ScheduleTimelineTile({
     required this.subject,
@@ -179,6 +237,7 @@ class _ScheduleTimelineTile extends StatelessWidget {
     required this.time,
     required this.status,
     required this.chipColor,
+    required this.room,
   });
 
   @override
@@ -218,6 +277,8 @@ class _ScheduleTimelineTile extends StatelessWidget {
                           fontWeight: FontWeight.w700,
                           color: AppColors.textBlack,
                         ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                     Container(
@@ -279,19 +340,19 @@ class _ScheduleTimelineTile extends StatelessWidget {
                     border: Border.all(color: AppColors.borderSoft),
                   ),
                   child: Row(
-                    children: const [
-                      Icon(
+                    children: [
+                      const Icon(
                         Icons.location_on_outlined,
                         size: 18,
                         color: AppColors.primaryBlue,
                       ),
-                      SizedBox(width: 6),
+                      const SizedBox(width: 6),
                       Expanded(
                         child: Text(
-                          'Class Room / Lab details available here',
-                          style: TextStyle(
+                          room,
+                          style: const TextStyle(
                             fontSize: 12,
-                            color: AppColors.mutedText,
+                            color: AppColors.textBlack,
                           ),
                         ),
                       ),

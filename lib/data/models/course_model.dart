@@ -6,6 +6,7 @@ class CourseModel {
   final String endTime;
   final String dayOfWeek;
   final String status;
+  final String roomIdentifier;
 
   CourseModel({
     required this.courseId,
@@ -15,6 +16,7 @@ class CourseModel {
     required this.endTime,
     required this.dayOfWeek,
     required this.status,
+    this.roomIdentifier = '',
   });
 
   factory CourseModel.fromMap(Map<String, dynamic> map) {
@@ -26,6 +28,7 @@ class CourseModel {
       endTime: map['EndTimeStr'] ?? map['endTime'] ?? '',
       dayOfWeek: map['DayOfWeek'] ?? map['dayOfWeek'] ?? '',
       status: map['status'] ?? '',
+      roomIdentifier: map['RoomIdentifier'] ?? map['roomIdentifier'] ?? '',
     );
   }
 
@@ -38,6 +41,7 @@ class CourseModel {
       'endTime': endTime,
       'dayOfWeek': dayOfWeek,
       'status': status,
+      'roomIdentifier': roomIdentifier,
     };
   }
 }
