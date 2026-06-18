@@ -1,54 +1,90 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../core/constants/app_colors.dart';
+import '../../core/routes/route_names.dart';
 import '../../core/widgets/search_box.dart';
 import '../../core/widgets/top_blue_header.dart';
+import '../../data/repositories/chat_local_repository.dart';
+import '../../di/injection.dart';
 
-class TeacherChatScreen extends StatelessWidget {
+class TeacherChatScreen extends StatefulWidget {
   const TeacherChatScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final chats = [
-      {
-        'name': 'Mrs. Sewwandi Perera',
-        'role': 'Parent',
-        'message': 'Can we discuss the progress report today?',
-        'time': '09:30 AM',
-        'unread': '2',
-      },
-      {
-        'name': 'Mr. Kasun Silva',
-        'role': 'Parent',
-        'message': 'Thank you for sharing the homework sheet.',
-        'time': 'Yesterday',
-        'unread': '1',
-      },
-      {
-        'name': 'Mrs. Anoma Fernando',
-        'role': 'Parent',
-        'message': 'Please send tomorrow’s class details.',
-        'time': 'Mon',
-        'unread': '0',
-      },
-      {
-        'name': 'Mr. Ruwan Perera',
-        'role': 'Parent',
-        'message': 'My child will be absent tomorrow.',
-        'time': 'Sun',
-        'unread': '0',
-      },
-    ];
+  State<TeacherChatScreen> createState() => _TeacherChatScreenState();
+}
 
+class _TeacherChatScreenState extends State<TeacherChatScreen> {
+  bool _isLoading = true;
+  List<ParentContact> _allContacts = [];
+  List<ParentContact> _filteredContacts = [];
+  String _searchQuery = '';
+  String _selectedFilter = 'All'; // 'All', 'Unread', 'Important'
+
+  @override
+  void initState() {
+    super.initState();
+    _loadContacts();
+  }
+
+  Future<void> _loadContacts() async {
+    final uid = authRepository.currentUser?.uid;
+    if (uid == null) return;
+
+    final contacts = await chatLocalRepository.getParentsForTeacher(uid);
+    if (mounted) {
+      setState(() {
+        _allContacts = contacts;
+        _isLoading = false;
+      });
+      _applyFilters();
+    }
+  }
+
+  void _onSearchChanged(String query) {
+    setState(() {
+      _searchQuery = query.toLowerCase();
+    });
+    _applyFilters();
+  }
+
+  void _onFilterChanged(String filter) {
+    setState(() {
+      _selectedFilter = filter;
+    });
+    _applyFilters();
+  }
+
+  void _applyFilters() {
+    List<ParentContact> temp = _allContacts;
+
+    if (_selectedFilter == 'Unread') {
+      temp = temp.where((c) => c.unreadCount > 0).toList();
+    } else if (_selectedFilter == 'Important') {
+      // Mock logic for Important filter, could just be empty for now
+    }
+
+    if (_searchQuery.isNotEmpty) {
+      temp = temp.where((c) {
+        return c.fullName.toLowerCase().contains(_searchQuery) ||
+               c.studentName.toLowerCase().contains(_searchQuery);
+      }).toList();
+    }
+
+    setState(() {
+      _filteredContacts = temp;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: AppColors.primaryBlue,
-        onPressed: () {},
-        child: const Icon(Icons.add_comment_outlined, color: Colors.white),
-      ),
       body: SafeArea(
-        child: SingleChildScrollView(
+        child: _isLoading
+          ? const Center(child: CircularProgressIndicator(color: AppColors.primaryBlue))
+          : SingleChildScrollView(
           padding: const EdgeInsets.only(bottom: 28),
           child: Column(
             children: [
@@ -78,39 +114,55 @@ class TeacherChatScreen extends StatelessWidget {
                 padding: const EdgeInsets.all(18),
                 child: Column(
                   children: [
-                    const SearchBox(hintText: 'Search parent'),
+                    SearchBox(
+                      hintText: 'Search parent or student',
+                      onChanged: _onSearchChanged,
+                    ),
                     const SizedBox(height: 16),
                     Row(
-                      children: const [
+                      children: [
                         _FilterChip(
                           text: 'All',
-                          color: Color(0xFFD7DDF4),
-                          textColor: AppColors.primaryBlue,
+                          isSelected: _selectedFilter == 'All',
+                          baseColor: const Color(0xFFD7DDF4),
+                          onTap: () => _onFilterChanged('All'),
                         ),
-                        SizedBox(width: 8),
+                        const SizedBox(width: 8),
                         _FilterChip(
                           text: 'Unread',
-                          color: Color(0xFFF5DE9B),
-                          textColor: AppColors.textBlack,
+                          isSelected: _selectedFilter == 'Unread',
+                          baseColor: const Color(0xFFF5DE9B),
+                          onTap: () => _onFilterChanged('Unread'),
                         ),
-                        SizedBox(width: 8),
+                        const SizedBox(width: 8),
                         _FilterChip(
                           text: 'Important',
-                          color: Color(0xFFCBE8C7),
-                          textColor: AppColors.textBlack,
+                          isSelected: _selectedFilter == 'Important',
+                          baseColor: const Color(0xFFCBE8C7),
+                          onTap: () => _onFilterChanged('Important'),
                         ),
                       ],
                     ),
                     const SizedBox(height: 18),
-                    ...chats.map(
-                      (chat) => _ChatTile(
-                        name: chat['name']!,
-                        role: chat['role']!,
-                        message: chat['message']!,
-                        time: chat['time']!,
-                        unread: chat['unread']!,
+                    if (_filteredContacts.isEmpty)
+                      const Padding(
+                        padding: EdgeInsets.all(30.0),
+                        child: Text(
+                          'No contacts found.',
+                          style: TextStyle(color: AppColors.mutedText, fontSize: 16),
+                        ),
+                      )
+                    else
+                      ..._filteredContacts.map(
+                        (contact) => _ChatTile(
+                          contact: contact,
+                          onTap: () async {
+                            // Push to conversation and await pop to refresh contacts
+                            await context.push('/teacher/chat/${contact.parentId}', extra: contact);
+                            _loadContacts(); // Refresh messages when back
+                          },
+                        ),
                       ),
-                    ),
                   ],
                 ),
               ),
@@ -123,126 +175,137 @@ class TeacherChatScreen extends StatelessWidget {
 }
 
 class _ChatTile extends StatelessWidget {
-  final String name;
-  final String role;
-  final String message;
-  final String time;
-  final String unread;
+  final ParentContact contact;
+  final VoidCallback onTap;
 
-  const _ChatTile({
-    required this.name,
-    required this.role,
-    required this.message,
-    required this.time,
-    required this.unread,
-  });
+  const _ChatTile({required this.contact, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    final hasUnread = unread != '0';
+    final hasUnread = contact.unreadCount > 0;
 
-    return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.only(bottom: 14),
-      padding: const EdgeInsets.all(14),
-      decoration: _box(),
-      child: Row(
-        children: [
-          Stack(
-            children: [
-              const CircleAvatar(radius: 24),
-              Positioned(
-                right: 0,
-                bottom: 0,
-                child: Container(
-                  width: 12,
-                  height: 12,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF34C759),
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white, width: 2),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        width: double.infinity,
+        margin: const EdgeInsets.only(bottom: 14),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: AppColors.borderBlue, width: 1.2),
+          boxShadow: const [
+            BoxShadow(color: Color(0x12000000), blurRadius: 10, offset: Offset(0, 4)),
+          ],
+        ),
+        child: Row(
+          children: [
+            Stack(
               children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        name,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.textBlack,
-                        ),
-                      ),
-                    ),
-                    Text(
-                      time,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: AppColors.mutedText,
-                      ),
-                    ),
-                  ],
+                CircleAvatar(
+                  radius: 24,
+                  backgroundColor: const Color(0xFFD7DDF4),
+                  backgroundImage: contact.profilePictureUri != null && contact.profilePictureUri!.isNotEmpty
+                    ? NetworkImage(contact.profilePictureUri!)
+                    : null,
+                  child: contact.profilePictureUri == null || contact.profilePictureUri!.isEmpty
+                    ? const Icon(Icons.person, color: AppColors.primaryBlue)
+                    : null,
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  role,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: AppColors.primaryBlue,
-                    fontWeight: FontWeight.w600,
+                Positioned(
+                  right: 0,
+                  bottom: 0,
+                  child: Container(
+                    width: 12,
+                    height: 12,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF34C759),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 2),
+                    ),
                   ),
-                ),
-                const SizedBox(height: 6),
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        message,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 13,
-                          color: AppColors.textBlack,
-                          height: 1.4,
-                        ),
-                      ),
-                    ),
-                    if (hasUnread) ...[
-                      const SizedBox(width: 10),
-                      Container(
-                        width: 22,
-                        height: 22,
-                        decoration: const BoxDecoration(
-                          color: AppColors.primaryBlue,
-                          shape: BoxShape.circle,
-                        ),
-                        child: Center(
-                          child: Text(
-                            unread,
-                            style: const TextStyle(
-                              fontSize: 11,
-                              color: Colors.white,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ],
                 ),
               ],
             ),
-          ),
-        ],
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          contact.fullName,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.textBlack,
+                          ),
+                        ),
+                      ),
+                      Text(
+                        contact.time,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: AppColors.mutedText,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Parent of ${contact.studentName}',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: AppColors.primaryBlue,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          contact.lastMessage,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            color: AppColors.textBlack,
+                            height: 1.4,
+                          ),
+                        ),
+                      ),
+                      if (hasUnread) ...[
+                        const SizedBox(width: 10),
+                        Container(
+                          width: 22,
+                          height: 22,
+                          decoration: const BoxDecoration(
+                            color: AppColors.primaryBlue,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Center(
+                            child: Text(
+                              contact.unreadCount.toString(),
+                              style: const TextStyle(
+                                fontSize: 11,
+                                color: Colors.white,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -250,42 +313,37 @@ class _ChatTile extends StatelessWidget {
 
 class _FilterChip extends StatelessWidget {
   final String text;
-  final Color color;
-  final Color textColor;
+  final bool isSelected;
+  final Color baseColor;
+  final VoidCallback onTap;
 
   const _FilterChip({
     required this.text,
-    required this.color,
-    required this.textColor,
+    required this.isSelected,
+    required this.baseColor,
+    required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(22),
-      ),
-      child: Text(
-        text,
-        style: TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w700,
-          color: textColor,
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? baseColor : Colors.white,
+          borderRadius: BorderRadius.circular(22),
+          border: isSelected ? null : Border.all(color: const Color(0xFFE0E5F2)),
+        ),
+        child: Text(
+          text,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+            color: isSelected ? AppColors.textBlack : AppColors.mutedText,
+          ),
         ),
       ),
     );
   }
-}
-
-BoxDecoration _box() {
-  return BoxDecoration(
-    color: Colors.white,
-    borderRadius: BorderRadius.circular(20),
-    border: Border.all(color: AppColors.borderBlue, width: 1.2),
-    boxShadow: const [
-      BoxShadow(color: Color(0x12000000), blurRadius: 10, offset: Offset(0, 4)),
-    ],
-  );
 }

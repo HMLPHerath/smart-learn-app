@@ -269,7 +269,26 @@ app.get('/api/teacher/:id/students', async (req, res) => {
         res.status(500).json({ success: false, message: 'Server error', error: err.message });
     }
 });
-
+// Get all distinct parents associated with a teacher's students
+app.get('/api/teacher/:id/parents', async (req, res) => {
+    try {
+        await sql.connect(config);
+        const result = await sql.query`
+            SELECT DISTINCT p.ParentID, p.FullName, u.ProfilePictureURI, s.FullName as StudentName
+            FROM ScheduleItem si
+            JOIN Class c ON si.ClassID = c.ClassID
+            JOIN Student s ON c.ClassID = s.ClassID
+            JOIN ParentStudentAssociation psa ON s.StudentID = psa.StudentID
+            JOIN Parent p ON psa.ParentID = p.ParentID
+            JOIN [User] u ON p.ParentID = u.UserID
+            WHERE si.TeacherID = ${req.params.id}
+            ORDER BY p.FullName ASC
+        `;
+        res.json({ success: true, parents: result.recordset });
+    } catch (err) {
+        res.status(500).json({ success: false, message: 'Server error', error: err.message });
+    }
+});
 // Create Teacher endpoint
 app.post('/api/teachers', async (req, res) => {
     try {

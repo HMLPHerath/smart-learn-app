@@ -13,6 +13,7 @@ class RouteNames {
   static const teacherGradebook = '/teacher/gradebook';
   static const teacherAttendance = '/teacher/attendance';
   static const teacherStudentProfile = '/teacher/student-profile/:id';
+  static const teacherChat = '/teacher/chat/:parentId';
 
   static const adminShell = '/admin';
   static const adminAdmitStudent = '/admin/admit-student';
