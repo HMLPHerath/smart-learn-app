@@ -276,29 +276,7 @@ class _ParentFormCard extends StatelessWidget {
             maxLines: 3,
             keyboardType: TextInputType.multiline,
           ),
-          const SizedBox(height: 18),
-          const _SectionLabel(title: 'Student Link Information'),
-          const SizedBox(height: 14),
-          AppTextField(
-            controller: studentIdController,
-            label: 'Student ID',
-            hintText: 'STU-2026-0001',
-            keyboardType: TextInputType.text,
-          ),
-          const SizedBox(height: 14),
-          AppTextField(
-            controller: studentNameController,
-            label: 'Student Name',
-            hintText: 'Enter student full name',
-            keyboardType: TextInputType.text,
-          ),
-          const SizedBox(height: 14),
-          AppTextField(
-            controller: relationshipController,
-            label: 'Relationship',
-            hintText: 'Mother / Father / Guardian',
-            keyboardType: TextInputType.text,
-          ),
+
         ],
       ),
     );
