@@ -293,6 +293,53 @@ app.get('/api/parent/:id/profile', async (req, res) => {
     }
 });
 
+// Get Parent's Child Results
+app.get('/api/parent/:id/results', async (req, res) => {
+    try {
+        const parentId = req.params.id;
+        await sql.connect(config);
+        
+        // Find the student ID for this parent
+        const studentResult = await sql.query`SELECT StudentID FROM Student WHERE ParentID = ${parentId}`;
+        if (studentResult.recordset.length === 0) {
+            return res.status(404).json({ success: false, message: 'Child not found for this parent' });
+        }
+        
+        const studentId = studentResult.recordset[0].StudentID;
+        
+        // Get the results for the student
+        const resultsQuery = await sql.query`
+            SELECT 
+                r.RawMarks, r.GradeLetter, r.AcademicTerm, r.AcademicYear,
+                c.CourseName
+            FROM GradeBookRecord r
+            JOIN Course c ON r.CourseID = c.CourseID
+            WHERE r.StudentID = ${studentId}
+        `;
+        
+        const results = resultsQuery.recordset;
+        
+        if (results.length > 0) {
+            let totalMarks = 0;
+            results.forEach(r => totalMarks += r.RawMarks);
+            const average = Math.round(totalMarks / results.length);
+            
+            res.json({ 
+                success: true, 
+                term: results[0].AcademicTerm,
+                year: results[0].AcademicYear,
+                average: average,
+                rank: '06', // Mocked rank for now
+                results: results 
+            });
+        } else {
+            res.json({ success: true, term: 'N/A', year: '', average: 0, rank: 'N/A', results: [] });
+        }
+    } catch (err) {
+        res.status(500).json({ success: false, message: 'Server error', error: err.message });
+    }
+});
+
 // Get Student by ID
 app.get('/api/students/:id', async (req, res) => {
     try {

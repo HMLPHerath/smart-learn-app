@@ -59,6 +59,23 @@ class ParentRepository {
     }
   }
 
+  Future<Map<String, dynamic>?> getParentChildResults(String parentId) async {
+    final url = Uri.parse('${sqlService.windowsUrl}/api/parent/$parentId/results');
+    try {
+      final response = await http.get(url);
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] == true) {
+          return data;
+        }
+      }
+      return null;
+    } catch (e) {
+      print("Error fetching parent child results: $e");
+      return null;
+    }
+  }
+
   Future<bool> addParent(Map<String, dynamic> parentData) async {
     final url = Uri.parse('${sqlService.windowsUrl}/api/parents');
     try {

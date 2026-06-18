@@ -2,38 +2,57 @@ import 'package:flutter/material.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/widgets/top_blue_header.dart';
+import '../../di/injection.dart';
 
-class ParentResultScreen extends StatelessWidget {
+class ParentResultScreen extends StatefulWidget {
   const ParentResultScreen({super.key});
 
   @override
+  State<ParentResultScreen> createState() => _ParentResultScreenState();
+}
+
+class _ParentResultScreenState extends State<ParentResultScreen> {
+  bool _loading = true;
+  Map<String, dynamic>? _resultsData;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadResults();
+  }
+
+  Future<void> _loadResults() async {
+    try {
+      final uid = authRepository.currentUser?.uid;
+      if (uid != null) {
+        final data = await parentRepository.getParentChildResults(uid);
+        if (mounted) {
+          setState(() {
+            _resultsData = data;
+            _loading = false;
+          });
+        }
+      } else {
+        if (mounted) setState(() => _loading = false);
+      }
+    } catch (e) {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final results = [
-      {
-        'subject': 'Mathematics',
-        'marks': '92',
-        'grade': 'A+',
-        'color': const Color(0xFFCBE8C7),
-      },
-      {
-        'subject': 'Science',
-        'marks': '88',
-        'grade': 'A',
-        'color': const Color(0xFFD7DDF4),
-      },
-      {
-        'subject': 'English',
-        'marks': '79',
-        'grade': 'B+',
-        'color': const Color(0xFFF5DE9B),
-      },
-      {
-        'subject': 'ICT',
-        'marks': '95',
-        'grade': 'A+',
-        'color': const Color(0xFFCBE8C7),
-      },
-    ];
+    if (_loading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator(color: AppColors.primaryBlue)),
+      );
+    }
+
+    final term = _resultsData?['term'] ?? 'N/A';
+    final year = _resultsData?['year'] ?? '';
+    final average = _resultsData?['average'] ?? 0;
+    final rank = _resultsData?['rank'] ?? 'N/A';
+    final resultsList = _resultsData?['results'] as List<dynamic>? ?? [];
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -43,23 +62,26 @@ class ParentResultScreen extends StatelessWidget {
           child: Column(
             children: [
               TopBlueHeader(
-                height: 230,
+                height: 220,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.end,
-                  children: const [
-                    Text(
+                  children: [
+                    const Text(
                       'Exam Results',
                       style: TextStyle(
                         color: Colors.white,
-                        fontSize: 30,
+                        fontSize: 28,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
-                    SizedBox(height: 6),
+                    const SizedBox(height: 8),
                     Text(
-                      'Term 01 • 2026',
-                      style: TextStyle(color: Colors.white70, fontSize: 15),
+                      '$term • $year',
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 15,
+                      ),
                     ),
                   ],
                 ),
@@ -69,35 +91,40 @@ class ParentResultScreen extends StatelessWidget {
                 child: Column(
                   children: [
                     Row(
-                      children: const [
+                      children: [
                         Expanded(
-                          child: _SummaryCard(
+                          child: _StatCard(
                             title: 'Average',
-                            value: '88%',
+                            value: '$average%',
                             icon: Icons.auto_graph_outlined,
                           ),
                         ),
-                        SizedBox(width: 12),
+                        const SizedBox(width: 14),
                         Expanded(
-                          child: _SummaryCard(
+                          child: _StatCard(
                             title: 'Rank',
-                            value: '06',
+                            value: rank,
                             icon: Icons.emoji_events_outlined,
                           ),
                         ),
                       ],
                     ),
                     const SizedBox(height: 18),
-                    const _PerformanceChartCard(),
+                    _PerformanceOverview(resultsList: resultsList),
                     const SizedBox(height: 18),
-                    ...results.map(
-                      (item) => _ResultTile(
-                        subject: item['subject']! as String,
-                        marks: item['marks']! as String,
-                        grade: item['grade']! as String,
-                        color: item['color']! as Color,
-                      ),
-                    ),
+                    if (resultsList.isEmpty)
+                      const Center(child: Text("No results found"))
+                    else
+                      ...resultsList.map((res) {
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 14),
+                          child: _SubjectResultCard(
+                            subject: res['CourseName'] ?? 'Unknown',
+                            marks: res['RawMarks'].toString(),
+                            grade: res['GradeLetter'] ?? 'N/A',
+                          ),
+                        );
+                      }),
                   ],
                 ),
               ),
@@ -109,12 +136,12 @@ class ParentResultScreen extends StatelessWidget {
   }
 }
 
-class _SummaryCard extends StatelessWidget {
+class _StatCard extends StatelessWidget {
   final String title;
   final String value;
   final IconData icon;
 
-  const _SummaryCard({
+  const _StatCard({
     required this.title,
     required this.value,
     required this.icon,
@@ -124,41 +151,42 @@ class _SummaryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: _box(),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.borderBlue, width: 1.2),
+      ),
       child: Row(
         children: [
           Container(
-            width: 46,
-            height: 46,
+            padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: const Color(0xFFD7DDF4),
-              borderRadius: BorderRadius.circular(14),
+              color: const Color(0xFFE2E7FA),
+              borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(icon, color: AppColors.primaryBlue),
+            child: Icon(icon, color: AppColors.primaryBlue, size: 22),
           ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: AppColors.mutedText,
-                  ),
+          const SizedBox(width: 12),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  color: AppColors.mutedText,
+                  fontSize: 12,
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  value,
-                  style: const TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textBlack,
-                  ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                value,
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.textBlack,
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ],
       ),
@@ -166,59 +194,88 @@ class _SummaryCard extends StatelessWidget {
   }
 }
 
-class _PerformanceChartCard extends StatelessWidget {
-  const _PerformanceChartCard();
+class _PerformanceOverview extends StatelessWidget {
+  final List<dynamic> resultsList;
+
+  const _PerformanceOverview({required this.resultsList});
 
   @override
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(18),
-      decoration: _box(),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.borderBlue, width: 1.2),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
             'Performance Overview',
             style: TextStyle(
-              fontSize: 17,
+              fontSize: 16,
               fontWeight: FontWeight.w700,
               color: AppColors.textBlack,
             ),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 20),
           Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 14),
+            height: 180,
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 20),
             decoration: BoxDecoration(
-              color: const Color(0xFFF9F9F9),
+              color: const Color(0xFFF9FAFD),
               borderRadius: BorderRadius.circular(16),
               border: Border.all(color: AppColors.borderSoft),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _BarItem(
-                  label: 'Math',
-                  height: 88,
-                  color: const Color(0xFFCBE8C7),
-                ),
-                _BarItem(
-                  label: 'Sci',
-                  height: 74,
-                  color: const Color(0xFFD7DDF4),
-                ),
-                _BarItem(
-                  label: 'Eng',
-                  height: 58,
-                  color: const Color(0xFFF5DE9B),
-                ),
-                _BarItem(
-                  label: 'ICT',
-                  height: 94,
-                  color: const Color(0xFFCBE8C7),
-                ),
-              ],
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: resultsList.map((res) {
+                // Determine bar color based on grade
+                Color barColor = const Color(0xFFCBE8C7); // Default Green (A)
+                if (res['GradeLetter'] == 'B' || res['GradeLetter'] == 'B+') {
+                  barColor = const Color(0xFFD7DDF4); // Blue (B)
+                } else if (res['GradeLetter'] == 'C' || res['GradeLetter'] == 'C+') {
+                  barColor = const Color(0xFFF6E4A8); // Yellow (C)
+                } else if (res['GradeLetter'] == 'S' || res['GradeLetter'] == 'W' || res['GradeLetter'] == 'F') {
+                  barColor = const Color(0xFFF0C7C7); // Red (Low)
+                }
+                
+                // Get short name for subject
+                String subj = res['CourseName'] ?? 'Sub';
+                if (subj.length > 4) {
+                   subj = subj.substring(0, 4);
+                }
+
+                double heightPct = (res['RawMarks'] ?? 0) / 100.0;
+                double barHeight = 100 * heightPct;
+                if (barHeight < 10) barHeight = 10;
+
+                return Column(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    Container(
+                      width: 28,
+                      height: barHeight,
+                      decoration: BoxDecoration(
+                        color: barColor,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      subj,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textBlack,
+                      ),
+                    ),
+                  ],
+                );
+              }).toList(),
             ),
           ),
         ],
@@ -227,74 +284,52 @@ class _PerformanceChartCard extends StatelessWidget {
   }
 }
 
-class _BarItem extends StatelessWidget {
-  final String label;
-  final double height;
-  final Color color;
-
-  const _BarItem({
-    required this.label,
-    required this.height,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Container(
-          width: 28,
-          height: height,
-          decoration: BoxDecoration(
-            color: color,
-            borderRadius: BorderRadius.circular(10),
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          label,
-          style: const TextStyle(fontSize: 12, color: AppColors.textBlack),
-        ),
-      ],
-    );
-  }
-}
-
-class _ResultTile extends StatelessWidget {
+class _SubjectResultCard extends StatelessWidget {
   final String subject;
   final String marks;
   final String grade;
-  final Color color;
 
-  const _ResultTile({
+  const _SubjectResultCard({
     required this.subject,
     required this.marks,
     required this.grade,
-    required this.color,
   });
 
   @override
   Widget build(BuildContext context) {
+    Color gradeColor;
+    if (grade.startsWith('A')) {
+      gradeColor = const Color(0xFFCBE8C7);
+    } else if (grade.startsWith('B')) {
+      gradeColor = const Color(0xFFD7DDF4);
+    } else if (grade.startsWith('C')) {
+      gradeColor = const Color(0xFFF6E4A8);
+    } else {
+      gradeColor = const Color(0xFFF0C7C7);
+    }
+
     return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.only(bottom: 14),
       padding: const EdgeInsets.all(16),
-      decoration: _box(),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.borderBlue, width: 1.2),
+      ),
       child: Row(
         children: [
           Container(
-            width: 46,
-            height: 46,
+            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: const Color(0xFFD7DDF4),
+              color: const Color(0xFFE2E7FA),
               borderRadius: BorderRadius.circular(14),
             ),
             child: const Icon(
               Icons.description_outlined,
               color: AppColors.primaryBlue,
+              size: 24,
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -319,16 +354,18 @@ class _ResultTile extends StatelessWidget {
             ),
           ),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            width: 40,
+            height: 40,
+            alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: color,
-              borderRadius: BorderRadius.circular(20),
+              color: gradeColor,
+              shape: BoxShape.circle,
             ),
             child: Text(
               grade,
               style: const TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
+                fontSize: 16,
+                fontWeight: FontWeight.w800,
                 color: AppColors.textBlack,
               ),
             ),
@@ -337,15 +374,4 @@ class _ResultTile extends StatelessWidget {
       ),
     );
   }
-}
-
-BoxDecoration _box() {
-  return BoxDecoration(
-    color: Colors.white,
-    borderRadius: BorderRadius.circular(20),
-    border: Border.all(color: AppColors.borderBlue, width: 1.2),
-    boxShadow: const [
-      BoxShadow(color: Color(0x12000000), blurRadius: 10, offset: Offset(0, 4)),
-    ],
-  );
 }
