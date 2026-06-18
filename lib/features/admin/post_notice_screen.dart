@@ -18,7 +18,7 @@ class _PostNoticeScreenState extends State<PostNoticeScreen> {
   final _noticeIdController = TextEditingController();
   final _authorIdController = TextEditingController();
   final _subjectController = TextEditingController();
-  final _audienceController = TextEditingController();
+  final _audienceController = TextEditingController(text: 'All');
   final _bodyController = TextEditingController();
 
   bool _isUrgent = false;
@@ -35,9 +35,9 @@ class _PostNoticeScreenState extends State<PostNoticeScreen> {
   }
 
   Future<void> _submitNotice() async {
-    if (_noticeIdController.text.isEmpty || _subjectController.text.isEmpty) {
+    if (_subjectController.text.isEmpty || _bodyController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Notice ID and Subject are required')),
+        const SnackBar(content: Text('Subject and Body are required')),
       );
       return;
     }
@@ -45,8 +45,7 @@ class _PostNoticeScreenState extends State<PostNoticeScreen> {
     setState(() => _isLoading = true);
 
     final success = await noticeRepository.addNotice({
-      'noticeId': _noticeIdController.text.trim(),
-      'authorId': _authorIdController.text.trim().isEmpty ? 'ADM-2026-0001' : _authorIdController.text.trim(),
+      'authorId': 'ADM-2026-0001', // Fallback to current admin
       'subject': _subjectController.text.trim(),
       'audience': _audienceController.text.trim(),
       'noticeBody': _bodyController.text.trim(),
@@ -118,8 +117,6 @@ class _PostNoticeScreenState extends State<PostNoticeScreen> {
                     child: Column(
                       children: [
                         _NoticeFormCard(
-                          noticeIdController: _noticeIdController,
-                          authorIdController: _authorIdController,
                           subjectController: _subjectController,
                           audienceController: _audienceController,
                           bodyController: _bodyController,
@@ -144,9 +141,7 @@ class _PostNoticeScreenState extends State<PostNoticeScreen> {
   }
 }
 
-class _NoticeFormCard extends StatelessWidget {
-  final TextEditingController noticeIdController;
-  final TextEditingController authorIdController;
+class _NoticeFormCard extends StatefulWidget {
   final TextEditingController subjectController;
   final TextEditingController audienceController;
   final TextEditingController bodyController;
@@ -154,14 +149,18 @@ class _NoticeFormCard extends StatelessWidget {
   final ValueChanged<bool> onUrgentChanged;
 
   const _NoticeFormCard({
-    required this.noticeIdController,
-    required this.authorIdController,
     required this.subjectController,
     required this.audienceController,
     required this.bodyController,
     required this.isUrgent,
     required this.onUrgentChanged,
   });
+
+  @override
+  State<_NoticeFormCard> createState() => _NoticeFormCardState();
+}
+
+class _NoticeFormCardState extends State<_NoticeFormCard> {
 
   @override
   Widget build(BuildContext context) {
@@ -185,39 +184,60 @@ class _NoticeFormCard extends StatelessWidget {
           const _SectionTitle(title: 'Notice Information'),
           const SizedBox(height: 14),
           AppTextField(
-            controller: noticeIdController,
-            label: 'Notice ID',
-            hintText: 'NOT-2026-0002',
-          ),
-          const SizedBox(height: 14),
-          AppTextField(
-            controller: authorIdController,
-            label: 'Author ID',
-            hintText: 'ADM-2026-0001',
-          ),
-          const SizedBox(height: 14),
-          AppTextField(
-            controller: subjectController,
+            controller: widget.subjectController,
             label: 'Subject',
             hintText: 'Enter notice title',
           ),
           const SizedBox(height: 14),
-          AppTextField(
-            controller: audienceController,
-            label: 'Audience',
-            hintText: 'Students / Parents / Teachers',
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Audience',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textBlack,
+                ),
+              ),
+              const SizedBox(height: 6),
+              DropdownButtonFormField<String>(
+                value: widget.audienceController.text,
+                decoration: InputDecoration(
+                  filled: true,
+                  fillColor: Colors.white,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: const BorderSide(color: AppColors.borderBlue),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: const BorderSide(color: AppColors.borderBlue),
+                  ),
+                ),
+                items: ['All', 'Students', 'Parents', 'Teachers']
+                    .map((val) => DropdownMenuItem(value: val, child: Text(val)))
+                    .toList(),
+                onChanged: (val) {
+                  if (val != null) {
+                    widget.audienceController.text = val;
+                  }
+                },
+              ),
+            ],
           ),
           const SizedBox(height: 14),
           AppTextField(
-            controller: bodyController,
+            controller: widget.bodyController,
             label: 'Notice Body',
             hintText: 'Write the full notice content here',
             maxLines: 6,
           ),
           const SizedBox(height: 14),
           SwitchListTile(
-            value: isUrgent,
-            onChanged: onUrgentChanged,
+            value: widget.isUrgent,
+            onChanged: widget.onUrgentChanged,
             activeColor: AppColors.primaryBlue,
             title: const Text('Mark as urgent', style: TextStyle(fontWeight: FontWeight.w600)),
             subtitle: const Text('This notice will be highlighted in the dashboard'),

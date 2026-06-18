@@ -378,8 +378,8 @@ app.post('/api/notices', async (req, res) => {
         await sql.connect(config);
         
         await sql.query`
-            INSERT INTO Notice (NoticeID, AuthorID, Subject, NoticeBody, Audience, IsUrgent)
-            VALUES (${noticeId}, ${authorId}, ${subject}, ${noticeBody}, ${audience}, ${isUrgent ? 1 : 0})
+            INSERT INTO Notice (CreatorAdminID, Subject, NoticeBody, Audience, IsUrgent)
+            VALUES (${authorId}, ${subject}, ${noticeBody}, ${audience}, ${isUrgent ? 1 : 0})
         `;
         
         res.json({ success: true, message: 'Notice created successfully' });
