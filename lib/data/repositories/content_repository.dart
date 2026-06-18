@@ -47,6 +47,23 @@ class ContentRepository {
     }
   }
 
+  Future<Map<String, dynamic>?> getStudentProfile(String studentId) async {
+    final url = Uri.parse('${sqlService.windowsUrl}/api/student/$studentId/profile');
+    try {
+      final response = await http.get(url);
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] == true && data['profile'] != null) {
+          return data['profile'] as Map<String, dynamic>;
+        }
+      }
+      return null;
+    } catch (e) {
+      print("Error fetching student profile: $e");
+      return null;
+    }
+  }
+
   Future<List<ScheduleModel>> getSchedules() async {
     return [];
   }
