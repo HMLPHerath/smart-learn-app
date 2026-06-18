@@ -99,6 +99,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                                     color: Colors.white,
                                     size: 28,
                                   ),
+                                  const SizedBox(width: 8),
+                                  IconButton(
+                                    icon: const Icon(Icons.logout_rounded, color: Colors.white, size: 26),
+                                    onPressed: () async {
+                                      await authRepository.logout();
+                                      if (context.mounted) {
+                                        context.go(RouteNames.login);
+                                      }
+                                    },
+                                  ),
                                 ],
                               ),
                             ],
