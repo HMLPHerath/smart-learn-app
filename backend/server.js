@@ -251,6 +251,25 @@ app.get('/api/teachers/:id', async (req, res) => {
     }
 });
 
+// Get all distinct students taught by a teacher
+app.get('/api/teacher/:id/students', async (req, res) => {
+    try {
+        await sql.connect(config);
+        const result = await sql.query`
+            SELECT DISTINCT s.StudentID, s.FullName, c.ClassName, u.AccountStatus 
+            FROM Student s 
+            JOIN Class c ON s.ClassID = c.ClassID
+            JOIN ScheduleItem si ON c.ClassID = si.ClassID
+            JOIN [User] u ON s.StudentID = u.UserID
+            WHERE si.TeacherID = ${req.params.id}
+            ORDER BY s.FullName ASC
+        `;
+        res.json({ success: true, students: result.recordset });
+    } catch (err) {
+        res.status(500).json({ success: false, message: 'Server error', error: err.message });
+    }
+});
+
 // Create Teacher endpoint
 app.post('/api/teachers', async (req, res) => {
     try {

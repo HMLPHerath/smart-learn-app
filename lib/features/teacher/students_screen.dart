@@ -3,52 +3,95 @@ import 'package:flutter/material.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/widgets/search_box.dart';
 import '../../core/widgets/top_blue_header.dart';
+import '../../di/injection.dart';
 
-class TeacherStudentsScreen extends StatelessWidget {
+class TeacherStudentsScreen extends StatefulWidget {
   const TeacherStudentsScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final students = [
-      {
-        'name': 'Aruja Wirarathna',
-        'id': 'STU-2026-0001',
-        'class': 'Grade 11-B',
-        'status': 'Active',
-        'statusColor': const Color(0xFFCBE8C7),
-      },
-      {
-        'name': 'Nethmi Perera',
-        'id': 'STU-2026-0002',
-        'class': 'Grade 11-B',
-        'status': 'Active',
-        'statusColor': const Color(0xFFCBE8C7),
-      },
-      {
-        'name': 'Kavindu Silva',
-        'id': 'STU-2026-0003',
-        'class': 'Grade 11-B',
-        'status': 'Pending',
-        'statusColor': const Color(0xFFF5DE9B),
-      },
-      {
-        'name': 'Sashini Fernando',
-        'id': 'STU-2026-0004',
-        'class': 'Grade 11-B',
-        'status': 'Active',
-        'statusColor': const Color(0xFFCBE8C7),
-      },
-    ];
+  State<TeacherStudentsScreen> createState() => _TeacherStudentsScreenState();
+}
 
+class _TeacherStudentsScreenState extends State<TeacherStudentsScreen> {
+  bool _isLoading = true;
+  List<Map<String, dynamic>> _allStudents = [];
+  List<Map<String, dynamic>> _filteredStudents = [];
+  
+  String _searchQuery = '';
+  String _selectedFilter = 'All'; // 'All', 'Active', 'Pending'
+
+  @override
+  void initState() {
+    super.initState();
+    _loadStudents();
+  }
+
+  Future<void> _loadStudents() async {
+    final uid = authRepository.currentUser?.uid;
+    if (uid == null) return;
+
+    final students = await teacherRepository.getStudentsForTeacher(uid);
+    if (mounted) {
+      setState(() {
+        _allStudents = students;
+        _isLoading = false;
+      });
+      _applyFilters();
+    }
+  }
+
+  void _onSearchChanged(String query) {
+    setState(() {
+      _searchQuery = query.toLowerCase();
+    });
+    _applyFilters();
+  }
+
+  void _onFilterChanged(String filter) {
+    setState(() {
+      _selectedFilter = filter;
+    });
+    _applyFilters();
+  }
+
+  void _applyFilters() {
+    List<Map<String, dynamic>> temp = _allStudents;
+
+    // Apply Status Filter
+    if (_selectedFilter != 'All') {
+      temp = temp.where((s) => s['AccountStatus'] == _selectedFilter).toList();
+    }
+
+    // Apply Search Filter
+    if (_searchQuery.isNotEmpty) {
+      temp = temp.where((s) {
+        final name = (s['FullName'] ?? '').toLowerCase();
+        final id = (s['StudentID'] ?? '').toLowerCase();
+        return name.contains(_searchQuery) || id.contains(_searchQuery);
+      }).toList();
+    }
+
+    setState(() {
+      _filteredStudents = temp;
+    });
+  }
+
+  Color _getStatusColor(String status) {
+    if (status == 'Active') return const Color(0xFFCBE8C7);
+    if (status == 'Pending') return const Color(0xFFF5DE9B);
+    if (status == 'Suspended') return const Color(0xFFF0C7C7);
+    return const Color(0xFFEEEEEE);
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: AppColors.primaryBlue,
-        onPressed: () {},
-        child: const Icon(Icons.add, color: Colors.white),
-      ),
+      // Removed the FAB as teachers do not add students
       body: SafeArea(
-        child: SingleChildScrollView(
+        child: _isLoading
+          ? const Center(child: CircularProgressIndicator(color: AppColors.primaryBlue))
+          : SingleChildScrollView(
           padding: const EdgeInsets.only(bottom: 28),
           child: Column(
             children: [
@@ -78,39 +121,54 @@ class TeacherStudentsScreen extends StatelessWidget {
                 padding: const EdgeInsets.all(18),
                 child: Column(
                   children: [
-                    const SearchBox(hintText: 'Search students'),
+                    SearchBox(
+                      hintText: 'Search students by name or ID',
+                      onChanged: _onSearchChanged,
+                    ),
                     const SizedBox(height: 16),
                     Row(
-                      children: const [
+                      children: [
                         _FilterChip(
                           text: 'All',
-                          color: Color(0xFFD7DDF4),
-                          textColor: AppColors.primaryBlue,
+                          isSelected: _selectedFilter == 'All',
+                          baseColor: const Color(0xFFD7DDF4),
+                          onTap: () => _onFilterChanged('All'),
                         ),
-                        SizedBox(width: 8),
+                        const SizedBox(width: 8),
                         _FilterChip(
                           text: 'Active',
-                          color: Color(0xFFCBE8C7),
-                          textColor: AppColors.textBlack,
+                          isSelected: _selectedFilter == 'Active',
+                          baseColor: const Color(0xFFCBE8C7),
+                          onTap: () => _onFilterChanged('Active'),
                         ),
-                        SizedBox(width: 8),
+                        const SizedBox(width: 8),
                         _FilterChip(
                           text: 'Pending',
-                          color: Color(0xFFF5DE9B),
-                          textColor: AppColors.textBlack,
+                          isSelected: _selectedFilter == 'Pending',
+                          baseColor: const Color(0xFFF5DE9B),
+                          onTap: () => _onFilterChanged('Pending'),
                         ),
                       ],
                     ),
                     const SizedBox(height: 18),
-                    ...students.map(
-                      (student) => _StudentTile(
-                        name: student['name']! as String,
-                        id: student['id']! as String,
-                        className: student['class']! as String,
-                        status: student['status']! as String,
-                        statusColor: student['statusColor']! as Color,
+                    if (_filteredStudents.isEmpty)
+                      const Padding(
+                        padding: EdgeInsets.all(30.0),
+                        child: Text(
+                          'No students found.',
+                          style: TextStyle(color: AppColors.mutedText, fontSize: 16),
+                        ),
+                      )
+                    else
+                      ..._filteredStudents.map(
+                        (student) => _StudentTile(
+                          name: student['FullName'] ?? 'Unknown',
+                          id: student['StudentID'] ?? 'N/A',
+                          className: student['ClassName'] ?? 'No Class',
+                          status: student['AccountStatus'] ?? 'Pending',
+                          statusColor: _getStatusColor(student['AccountStatus'] ?? ''),
+                        ),
                       ),
-                    ),
                   ],
                 ),
               ),
@@ -146,7 +204,11 @@ class _StudentTile extends StatelessWidget {
       decoration: _box(),
       child: Row(
         children: [
-          const CircleAvatar(radius: 24),
+          const CircleAvatar(
+            radius: 24,
+            backgroundColor: Color(0xFFD7DDF4),
+            child: Icon(Icons.person, color: AppColors.primaryBlue),
+          ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -206,29 +268,38 @@ class _StudentTile extends StatelessWidget {
 
 class _FilterChip extends StatelessWidget {
   final String text;
-  final Color color;
-  final Color textColor;
+  final bool isSelected;
+  final Color baseColor;
+  final VoidCallback onTap;
 
   const _FilterChip({
     required this.text,
-    required this.color,
-    required this.textColor,
+    required this.isSelected,
+    required this.baseColor,
+    required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(22),
-      ),
-      child: Text(
-        text,
-        style: TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w700,
-          color: textColor,
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? baseColor : Colors.white,
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(
+            color: isSelected ? baseColor : AppColors.borderBlue,
+            width: 1.2,
+          ),
+        ),
+        child: Text(
+          text,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
+            color: isSelected ? AppColors.textBlack : AppColors.mutedText,
+          ),
         ),
       ),
     );

@@ -60,4 +60,20 @@ class TeacherRepository {
       return false;
     }
   }
+  Future<List<Map<String, dynamic>>> getStudentsForTeacher(String teacherId) async {
+    final url = Uri.parse('${sqlService.windowsUrl}/api/teacher/$teacherId/students');
+    try {
+      final response = await http.get(url);
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] == true && data['students'] != null) {
+          return List<Map<String, dynamic>>.from(data['students']);
+        }
+      }
+      return [];
+    } catch (e) {
+      print("Error fetching students for teacher: $e");
+      return [];
+    }
+  }
 }
