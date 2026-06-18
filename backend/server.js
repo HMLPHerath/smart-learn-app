@@ -306,9 +306,12 @@ app.get('/api/parents/:id', async (req, res) => {
     try {
         await sql.connect(config);
         const result = await sql.query`
-            SELECT p.*, u.Email, u.PhoneNumber, u.AccountStatus, u.ProfilePictureURI 
+            SELECT p.*, u.Email, u.PhoneNumber, u.AccountStatus, u.ProfilePictureURI,
+                   s.FullName AS childName, s.StudentID AS childStudentId, s.ClassID AS className
             FROM Parent p 
             JOIN [User] u ON p.ParentID = u.UserID
+            LEFT JOIN ParentStudentAssociation psa ON p.ParentID = psa.ParentID
+            LEFT JOIN Student s ON psa.StudentID = s.StudentID
             WHERE p.ParentID = ${req.params.id}
         `;
         if (result.recordset.length > 0) {

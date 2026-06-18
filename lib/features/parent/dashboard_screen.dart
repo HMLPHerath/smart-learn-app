@@ -107,14 +107,18 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
             Padding(
               padding: const EdgeInsets.all(18),
               child: Column(
-                children: const [
-                  _StudentHeroCard(),
-                  SizedBox(height: 18),
-                  _ParentQuickActions(),
-                  SizedBox(height: 18),
-                  _PerformanceCard(),
-                  SizedBox(height: 18),
-                  _TeacherMessagesCard(),
+                children: [
+                  _StudentHeroCard(
+                    childName: _parent?.childName ?? '',
+                    childClass: _parent?.className ?? '',
+                    childId: _parent?.childStudentId ?? '',
+                  ),
+                  const SizedBox(height: 18),
+                  const _ParentQuickActions(),
+                  const SizedBox(height: 18),
+                  const _PerformanceCard(),
+                  const SizedBox(height: 18),
+                  const _TeacherMessagesCard(),
                 ],
               ),
             ),
@@ -126,7 +130,15 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
 }
 
 class _StudentHeroCard extends StatelessWidget {
-  const _StudentHeroCard();
+  final String childName;
+  final String childClass;
+  final String childId;
+
+  const _StudentHeroCard({
+    required this.childName,
+    required this.childClass,
+    required this.childId,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -149,27 +161,27 @@ class _StudentHeroCard extends StatelessWidget {
         children: [
           const CircularAvatar(radius: 34),
           const SizedBox(width: 14),
-          const Expanded(
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Aruja Wirarathna',
-                  style: TextStyle(
+                  childName.isEmpty ? 'No Student Linked' : childName,
+                  style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w700,
                     color: AppColors.textBlack,
                   ),
                 ),
-                SizedBox(height: 6),
+                const SizedBox(height: 6),
                 Text(
-                  'Grade 11-B',
-                  style: TextStyle(color: AppColors.mutedText, fontSize: 13),
+                  childClass.isEmpty ? 'Unknown Class' : childClass,
+                  style: const TextStyle(color: AppColors.mutedText, fontSize: 13),
                 ),
-                SizedBox(height: 4),
+                const SizedBox(height: 4),
                 Text(
-                  'STU-2026-0001',
-                  style: TextStyle(
+                  childId.isEmpty ? 'No ID' : childId,
+                  style: const TextStyle(
                     color: AppColors.primaryBlue,
                     fontSize: 13,
                     fontWeight: FontWeight.w700,
