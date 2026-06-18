@@ -95,6 +95,15 @@ class _AdminAddCourseScheduleScreenState extends State<AdminAddCourseScheduleScr
       return;
     }
 
+    final startMinutes = _startTime!.hour * 60 + _startTime!.minute;
+    final endMinutes = _endTime!.hour * 60 + _endTime!.minute;
+    if (endMinutes <= startMinutes) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('End Time must be later than Start Time')),
+      );
+      return;
+    }
+
     setState(() => _isSaving = true);
 
     final success = await adminRepository.addCourseSchedule(
