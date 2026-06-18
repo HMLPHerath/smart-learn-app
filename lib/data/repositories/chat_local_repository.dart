@@ -56,6 +56,35 @@ class ParentContact {
   }
 }
 
+class TeacherContact {
+  final String teacherId;
+  final String fullName;
+  final String? profilePictureUri;
+  final String specialization;
+  String lastMessage;
+  int unreadCount;
+  String time;
+
+  TeacherContact({
+    required this.teacherId,
+    required this.fullName,
+    this.profilePictureUri,
+    required this.specialization,
+    this.lastMessage = '',
+    this.unreadCount = 0,
+    this.time = '',
+  });
+
+  factory TeacherContact.fromMap(Map<String, dynamic> map) {
+    return TeacherContact(
+      teacherId: map['TeacherID'] ?? '',
+      fullName: map['FullName'] ?? 'Unknown',
+      profilePictureUri: map['ProfilePictureURI'],
+      specialization: map['Specialization'] ?? '',
+    );
+  }
+}
+
 class ChatLocalRepository {
   final SqlService sqlService;
   
@@ -131,5 +160,49 @@ class ChatLocalRepository {
 
     final jsonList = messages.map((m) => m.toMap()).toList();
     await prefs.setString(key, jsonEncode(jsonList));
+  }
+
+  Future<List<TeacherContact>> getTeachersForParent(String parentId) async {
+    final url = Uri.parse('${sqlService.windowsUrl}/api/parent/$parentId/teachers');
+    try {
+      final response = await http.get(url);
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] == true && data['teachers'] != null) {
+          final List<dynamic> list = data['teachers'];
+          final teachers = list.map((item) => TeacherContact.fromMap(item)).toList();
+          
+          // Populate local last message for each teacher
+          final prefs = await SharedPreferences.getInstance();
+          for (var t in teachers) {
+            // For parents, the key format is the same: chat_{teacherId}_{parentId}
+            final key = 'chat_${t.teacherId}_$parentId';
+            final jsonStr = prefs.getString(key);
+            if (jsonStr != null) {
+              final List<dynamic> decoded = jsonDecode(jsonStr);
+              if (decoded.isNotEmpty) {
+                final lastMsg = ChatMessage.fromMap(decoded.last);
+                t.lastMessage = lastMsg.text;
+                // Format time simply
+                final now = DateTime.now();
+                if (lastMsg.timestamp.day == now.day && lastMsg.timestamp.month == now.month) {
+                  t.time = '${lastMsg.timestamp.hour.toString().padLeft(2, '0')}:${lastMsg.timestamp.minute.toString().padLeft(2, '0')}';
+                } else {
+                  t.time = 'Yesterday';
+                }
+              }
+            } else {
+               t.lastMessage = 'Tap to start chatting';
+               t.time = '';
+            }
+          }
+          return teachers;
+        }
+      }
+      return [];
+    } catch (e) {
+      print("Error fetching teachers: $e");
+      return [];
+    }
   }
 }

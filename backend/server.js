@@ -340,6 +340,37 @@ app.get('/api/parent/:id/results', async (req, res) => {
     }
 });
 
+// Get Teachers for Parent's Child
+app.get('/api/parent/:id/teachers', async (req, res) => {
+    try {
+        const parentId = req.params.id;
+        await sql.connect(config);
+        
+        // Find the student ID & ClassID for this parent
+        const studentResult = await sql.query`SELECT ClassID FROM Student WHERE ParentID = ${parentId}`;
+        if (studentResult.recordset.length === 0) {
+            return res.status(404).json({ success: false, message: 'Child not found for this parent' });
+        }
+        
+        const classId = studentResult.recordset[0].ClassID;
+        
+        // Get the teachers who teach this class
+        const teacherQuery = await sql.query`
+            SELECT DISTINCT
+                t.TeacherID, t.FullName, t.Specialization,
+                u.ProfilePictureURI
+            FROM ScheduleItem s
+            JOIN Teacher t ON s.TeacherID = t.TeacherID
+            JOIN [User] u ON t.TeacherID = u.UserID
+            WHERE s.ClassID = ${classId}
+        `;
+        
+        res.json({ success: true, teachers: teacherQuery.recordset });
+    } catch (err) {
+        res.status(500).json({ success: false, message: 'Server error', error: err.message });
+    }
+});
+
 // Get Student by ID
 app.get('/api/students/:id', async (req, res) => {
     try {
