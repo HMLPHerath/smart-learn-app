@@ -98,7 +98,7 @@ class _LoginScreenState extends State<LoginScreen> {
       body: Column(
         children: [
           TopBlueHeader(
-            height: 255,
+            height: 290,
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
