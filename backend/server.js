@@ -123,7 +123,7 @@ const config = {
 app.get('/test', async (req, res) => {
     try {
         await sql.connect();
-        const result = await sql.query`SELECT 1 as test`;
+        const result = await sql.query`SELECT 1 AS "test"`;
         res.json({ success: true, message: 'Successfully connected to SQL Server using Windows Authentication!', result: result.recordset });
     } catch (err) {
         console.error('Database connection failed', err);
@@ -139,8 +139,7 @@ app.post('/demo-insert', async (req, res) => {
         // Ensure table exists, if not, create a basic one for demo
         try {
             await sql.query`
-                IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='User' and xtype='U')
-                CREATE TABLE [User] (
+                CREATE TABLE IF NOT EXISTS "User" (
                     UserID VARCHAR(15) PRIMARY KEY,
                     Email VARCHAR(100),
                     PasswordHash CHAR(64),
@@ -155,9 +154,9 @@ app.post('/demo-insert', async (req, res) => {
 
         // Insert demo data
         await sql.query`
-            IF NOT EXISTS (SELECT * FROM [User] WHERE UserID = 'ADM-2026-0001')
-            INSERT INTO [User] (UserID, Email, PasswordHash, PhoneNumber, AccountStatus, ProfilePictureURI)
+            INSERT INTO "User" (UserID, Email, PasswordHash, PhoneNumber, AccountStatus, ProfilePictureURI)
             VALUES ('ADM-2026-0001', 'admin@smartedu.com', '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92', '0770000000', 'Active', NULL)
+            ON CONFLICT (UserID) DO NOTHING;
         `;
         res.json({ success: true, message: 'Demo data inserted successfully into [User] table.' });
     } catch (err) {
@@ -194,7 +193,7 @@ app.post('/api/login', async (req, res) => {
                 userId: user.UserID,
                 role: role,
                 email: user.Email,
-                name: user.UserID // We'll use ID as name until we fetch the profile
+                name: user.UserID // We'll use ID AS "name" until we fetch the profile
             });
         } else {
             res.status(401).json({ success: false, message: 'Invalid email or password' });
@@ -266,7 +265,7 @@ app.get('/api/student/:id/profile', async (req, res) => {
                 s.StudentID, s.FullName, s.ClassID, s.ParentID, 
                 u.Email, u.PhoneNumber, u.ProfilePictureURI,
                 c.ClassName,
-                p.FullName AS ParentName
+                p.FullName AS "ParentName"
             FROM Student s
             JOIN [User] u ON s.StudentID = u.UserID
             LEFT JOIN Class c ON s.ClassID = c.ClassID
@@ -275,7 +274,7 @@ app.get('/api/student/:id/profile', async (req, res) => {
         `;
 
         if (result.recordset.length > 0) {
-            // Mocking attendance to 98% for now, as there isn't an attendance table logic defined here easily.
+            // Mocking attendance to 98% for now, AS "there" isn't an attendance table logic defined here easily.
             const profile = result.recordset[0];
             profile.Attendance = '98%';
             res.json({ success: true, profile: profile });
@@ -318,8 +317,8 @@ app.get('/api/teacher/:id/profile', async (req, res) => {
             // Get stats (Classes count, Students count)
             const statsResult = await sql.query`
                 SELECT 
-                    COUNT(DISTINCT s.ClassID) as ClassCount,
-                    COUNT(DISTINCT st.StudentID) as StudentCount
+                    COUNT(DISTINCT s.ClassID) AS "ClassCount",
+                    COUNT(DISTINCT st.StudentID) AS "StudentCount"
                 FROM ScheduleItem s
                 LEFT JOIN Student st ON s.ClassID = st.ClassID
                 WHERE s.TeacherID = ${teacherId}
@@ -351,8 +350,8 @@ app.get('/api/parent/:id/profile', async (req, res) => {
             SELECT 
                 p.ParentID, p.FullName, 
                 u.Email, u.PhoneNumber, u.ProfilePictureURI,
-                s.FullName AS ChildName, s.StudentID AS ChildStudentID,
-                c.ClassName AS ChildClass
+                s.FullName AS "ChildName", s.StudentID AS "ChildStudentID",
+                c.ClassName AS "ChildClass"
             FROM Parent p
             JOIN [User] u ON p.ParentID = u.UserID
             LEFT JOIN Student s ON p.ParentID = s.ParentID
@@ -454,7 +453,7 @@ app.get('/api/students/:id', async (req, res) => {
         await sql.connect();
         const result = await sql.query`
             SELECT s.*, u.Email, u.PhoneNumber, u.AccountStatus, u.ProfilePictureURI,
-                ISNULL((
+                COALESCE((
                     SELECT CAST(AVG(CASE GradeLetter
                         WHEN 'A+' THEN 4.0
                         WHEN 'A'  THEN 4.0
@@ -468,12 +467,12 @@ app.get('/api/students/:id', async (req, res) => {
                     END) AS DECIMAL(5,2))
                     FROM GradeBookRecord 
                     WHERE StudentID = s.StudentID
-                ), 0.0) AS gpa,
-                ISNULL((
-                    SELECT CAST(SUM(CASE WHEN IsPresent = 1 THEN 1 ELSE 0 END) * 100.0 / COUNT(*) AS INT)
+                ), 0.0) AS "gpa",
+                COALESCE((
+                    SELECT CAST(SUM(CASE WHEN IsPresent = true THEN 1 ELSE 0 END) * 100.0 / COUNT(*) AS INT)
                     FROM Attendance
                     WHERE StudentID = s.StudentID
-                ), 0) AS attendanceRate
+                ), 0) AS "attendanceRate"
             FROM Student s 
             JOIN [User] u ON s.StudentID = u.UserID
             WHERE s.StudentID = ${req.params.id}
@@ -589,7 +588,7 @@ app.get('/api/teacher/:id/parents', async (req, res) => {
     try {
         await sql.connect();
         const result = await sql.query`
-            SELECT DISTINCT p.ParentID, p.FullName, u.ProfilePictureURI, s.FullName as StudentName
+            SELECT DISTINCT p.ParentID, p.FullName, u.ProfilePictureURI, s.FullName AS "StudentName"
             FROM ScheduleItem si
             JOIN Class c ON si.ClassID = c.ClassID
             JOIN Student s ON c.ClassID = s.ClassID
@@ -660,7 +659,7 @@ app.get('/api/parents/:id', async (req, res) => {
         await sql.connect();
         const result = await sql.query`
             SELECT p.*, u.Email, u.PhoneNumber, u.AccountStatus, u.ProfilePictureURI,
-                   s.FullName AS childName, s.StudentID AS childStudentId, s.ClassID AS className
+                   s.FullName AS "childName", s.StudentID AS "childStudentId", s.ClassID AS "className"
             FROM Parent p 
             JOIN [User] u ON p.ParentID = u.UserID
             LEFT JOIN ParentStudentAssociation psa ON p.ParentID = psa.ParentID
@@ -732,7 +731,7 @@ app.post('/api/notices', async (req, res) => {
 
         await sql.query`
             INSERT INTO Notice (CreatorAdminID, Subject, NoticeBody, Audience, IsUrgent)
-            VALUES (${authorId}, ${subject}, ${noticeBody}, ${audience}, ${isUrgent ? 1 : 0})
+            VALUES (${authorId}, ${subject}, ${noticeBody}, ${audience}, ${isUrgent ? true : false})
         `;
 
         res.json({ success: true, message: 'Notice created successfully' });
@@ -810,10 +809,10 @@ app.get('/api/student/:id/schedule', async (req, res) => {
         const result = await sql.query`
             SELECT 
                 s.ScheduleID, s.DayOfWeek, 
-                CONVERT(varchar(15), CAST(s.StartTime AS TIME), 100) AS StartTimeStr, 
-                CONVERT(varchar(15), CAST(s.EndTime AS TIME), 100) AS EndTimeStr, 
+                TO_CHAR(s.StartTime::time, 'HH12:MI AM') AS "StartTimeStr", 
+                TO_CHAR(s.EndTime::time, 'HH12:MI AM') AS "EndTimeStr", 
                 s.RoomIdentifier, c.ClassID, c.ClassName, 
-                t.TeacherID, t.FullName AS InstructorName, 
+                t.TeacherID, t.FullName AS "InstructorName", 
                 co.CourseID, co.CourseName
             FROM ScheduleItem s
             INNER JOIN Class c ON s.ClassID = c.ClassID
@@ -842,22 +841,24 @@ app.get('/api/admin/dashboard-stats', async (req, res) => {
         await sql.connect();
         const countsResult = await sql.query`
             SELECT 
-                (SELECT COUNT(*) FROM Student) AS totalStudents,
-                (SELECT COUNT(*) FROM Parent) AS totalParents,
-                (SELECT COUNT(*) FROM Teacher) AS totalTeachers,
-                (SELECT COUNT(*) FROM Notice) AS totalNotices
+                (SELECT COUNT(*) FROM Student) AS "totalStudents",
+                (SELECT COUNT(*) FROM Parent) AS "totalParents",
+                (SELECT COUNT(*) FROM Teacher) AS "totalTeachers",
+                (SELECT COUNT(*) FROM Notice) AS "totalNotices"
         `;
 
         const noticesResult = await sql.query`
-            SELECT TOP 3 * FROM Notice 
-            WHERE IsUrgent = 1
+            SELECT * FROM Notice 
+            WHERE IsUrgent = true
             ORDER BY CreatedAt DESC
+            LIMIT 3
         `;
 
         const updatesResult = await sql.query`
-            SELECT TOP 3 UserID, Email, AccountStatus 
+            SELECT UserID, Email, AccountStatus 
             FROM [User] 
             ORDER BY UserID DESC
+            LIMIT 3
         `;
 
         res.json({

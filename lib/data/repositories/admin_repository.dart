@@ -23,10 +23,10 @@ class AdminDashboardStats {
   factory AdminDashboardStats.fromMap(Map<String, dynamic> map) {
     final counts = map['counts'] ?? {};
     return AdminDashboardStats(
-      totalStudents: counts['totalStudents'] ?? 0,
-      totalParents: counts['totalParents'] ?? 0,
-      totalTeachers: counts['totalTeachers'] ?? 0,
-      totalNotices: counts['totalNotices'] ?? 0,
+      totalStudents: counts['totalStudents'] != null ? int.tryParse(counts['totalStudents'].toString()) ?? 0 : 0,
+      totalParents: counts['totalParents'] != null ? int.tryParse(counts['totalParents'].toString()) ?? 0 : 0,
+      totalTeachers: counts['totalTeachers'] != null ? int.tryParse(counts['totalTeachers'].toString()) ?? 0 : 0,
+      totalNotices: counts['totalNotices'] != null ? int.tryParse(counts['totalNotices'].toString()) ?? 0 : 0,
       recentAlerts: map['recentAlerts'] ?? [],
       latestUpdates: map['latestUpdates'] ?? [],
     );
