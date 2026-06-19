@@ -81,6 +81,47 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+const casingMap = {
+    userid: 'UserID', email: 'Email', passwordhash: 'PasswordHash', phonenumber: 'PhoneNumber',
+    accountstatus: 'AccountStatus', profilepictureuri: 'ProfilePictureURI', studentid: 'StudentID',
+    fullname: 'FullName', dateofbirth: 'DateOfBirth', homeaddress: 'HomeAddress',
+    birthcertificatepath: 'BirthCertificatePath', classid: 'ClassID', parentid: 'ParentID',
+    relationship: 'Relationship', teacherid: 'TeacherID', specialization: 'Specialization',
+    classname: 'ClassName', gradelevel: 'GradeLevel', section: 'Section',
+    roomidentifier: 'RoomIdentifier', noticeid: 'NoticeID', creatoradminid: 'CreatorAdminID',
+    subject: 'Subject', noticebody: 'NoticeBody', createdat: 'CreatedAt', audience: 'Audience',
+    isurgent: 'IsUrgent', dayofweek: 'DayOfWeek', starttime: 'StartTime', endtime: 'EndTime',
+    courseid: 'CourseID', coursename: 'CourseName', childname: 'ChildName', childstudentid: 'ChildStudentID',
+    childclass: 'ChildClass', rawmarks: 'RawMarks', gradeletter: 'GradeLetter',
+    academicterm: 'AcademicTerm', academicyear: 'AcademicYear', studentname: 'StudentName',
+    totalstudents: 'totalStudents', totalparents: 'totalParents', totalteachers: 'totalTeachers',
+    totalnotices: 'totalNotices', classcount: 'ClassCount', studentcount: 'StudentCount',
+    gpa: 'gpa', attendancerate: 'attendanceRate', bookid: 'BookID', title: 'Title',
+    subtitle: 'Subtitle', iconname: 'IconName', colorhex: 'ColorHex', fileurl: 'FileUrl', category: 'Category',
+    parentname: 'ParentName', starttimestr: 'StartTimeStr', endtimestr: 'EndTimeStr', instructorname: 'InstructorName',
+    nic_number: 'NIC_Number', nic_copypath: 'NIC_CopyPath', scheduleid: 'ScheduleID', recordid: 'RecordID'
+};
+
+const originalJson = express.response.json;
+express.response.json = function(body) {
+    const fixKeys = (obj) => {
+        if (Array.isArray(obj)) return obj.map(fixKeys);
+        if (obj !== null && typeof obj === 'object') {
+            const newObj = {};
+            for (let key in obj) {
+                const mappedKey = casingMap[key] || key;
+                newObj[mappedKey] = typeof obj[key] === 'object' ? fixKeys(obj[key]) : obj[key];
+            }
+            return newObj;
+        }
+        return obj;
+    };
+    if (body && body.success === true) {
+        body = fixKeys(body);
+    }
+    return originalJson.call(this, body);
+};
+
 // Ensure uploads directory exists
 const isVercel = process.env.VERCEL === '1';
 const uploadsDir = isVercel ? path.join('/tmp', 'uploads') : path.join(__dirname, 'uploads');
@@ -606,8 +647,9 @@ app.get('/api/teacher/:id/parents', async (req, res) => {
 // Create Teacher endpoint
 app.post('/api/teachers', async (req, res) => {
     try {
-        const { teacherId, email, phoneNumber, fullName, subject, qualifications } = req.body;
+        const { teacherId, email, phoneNumber, fullName, subject, specialization, qualifications } = req.body;
         const defaultPasswordHash = '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92'; // 123456
+        const finalSpec = subject || specialization || 'General';
 
         await sql.connect();
 
@@ -617,14 +659,14 @@ app.post('/api/teachers', async (req, res) => {
         try {
             const request1 = new sql.Request(transaction);
             await request1.query`
-                INSERT INTO [User] (UserID, Email, PasswordHash, PhoneNumber, AccountStatus)
+                INSERT INTO "User" (UserID, Email, PasswordHash, PhoneNumber, AccountStatus)
                 VALUES (${teacherId}, ${email}, ${defaultPasswordHash}, ${phoneNumber}, 'Active')
             `;
 
             const request2 = new sql.Request(transaction);
             await request2.query`
                 INSERT INTO Teacher (TeacherID, FullName, Specialization)
-                VALUES (${teacherId}, ${fullName}, ${subject})
+                VALUES (${teacherId}, ${fullName}, ${finalSpec})
             `;
 
             await transaction.commit();
