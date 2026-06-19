@@ -15,6 +15,7 @@ import '../../features/splash/splash_screen.dart';
 import '../../features/student/guide_books_screen.dart';
 import '../../features/student/short_notes_screen.dart';
 import '../../features/student/student_shell.dart';
+import '../../features/parent/parent_chat_conversation_screen.dart';
 
 import '../../features/teacher/attendance_screen.dart';
 import '../../features/teacher/chat_conversation_screen.dart';
@@ -62,8 +63,15 @@ GoRouter buildAppRouter({required bool isWeb}) {
         path: RouteNames.parentShell,
         builder: (context, state) => const ParentShell(),
       ),
+      GoRoute(
+        path: RouteNames.parentChat,
+        builder: (context, state) {
+          final contact = state.extra as TeacherContact;
+          return ParentChatConversationScreen(contact: contact);
+        },
+      ),
 
-      /// teacher
+      // Teacher routes
       GoRoute(
         path: RouteNames.teacherShell,
         builder: (context, state) => const TeacherShell(),

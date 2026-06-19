@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/widgets/search_box.dart';
@@ -48,7 +49,14 @@ class _ParentChatScreenState extends State<ParentChatScreen> {
       backgroundColor: AppColors.background,
       floatingActionButton: FloatingActionButton(
         backgroundColor: AppColors.primaryBlue,
-        onPressed: () {},
+        onPressed: () {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Please select a teacher from the list to start a chat.'),
+              backgroundColor: AppColors.primaryBlue,
+            ),
+          );
+        },
         child: const Icon(Icons.add_comment_outlined, color: Colors.white),
       ),
       body: SafeArea(
@@ -121,9 +129,9 @@ class _ParentChatScreenState extends State<ParentChatScreen> {
                             message: teacher.lastMessage,
                             time: teacher.time,
                             unread: teacher.unreadCount.toString(),
-                            onTap: () {
-                              // Navigate to chat conversation passing teacherId and parentId
-                              // Currently, we just mock the navigation or keep it static
+                            onTap: () async {
+                              await context.push('/parent/chat/${teacher.teacherId}', extra: teacher);
+                              _loadTeachers();
                             },
                           ),
                         ),

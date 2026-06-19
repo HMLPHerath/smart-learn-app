@@ -421,7 +421,7 @@ app.get('/api/parent/:id/results', async (req, res) => {
         await sql.connect();
 
         // Find the student ID for this parent
-        const studentResult = await sql.query`SELECT StudentID FROM Student WHERE ParentID = ${parentId}`;
+        const studentResult = await sql.query`SELECT StudentID FROM ParentStudentAssociation WHERE ParentID = ${parentId}`;
         if (studentResult.recordset.length === 0) {
             return res.status(404).json({ success: false, message: 'Child not found for this parent' });
         }
@@ -468,7 +468,12 @@ app.get('/api/parent/:id/teachers', async (req, res) => {
         await sql.connect();
 
         // Find the student ID & ClassID for this parent
-        const studentResult = await sql.query`SELECT ClassID FROM Student WHERE ParentID = ${parentId}`;
+        const studentResult = await sql.query`
+            SELECT s.ClassID 
+            FROM Student s
+            JOIN ParentStudentAssociation psa ON s.StudentID = psa.StudentID
+            WHERE psa.ParentID = ${parentId}
+        `;
         if (studentResult.recordset.length === 0) {
             return res.status(404).json({ success: false, message: 'Child not found for this parent' });
         }
@@ -1088,3 +1093,4 @@ app.listen(PORT, () => {
 
 // Export the Express API for Vercel Serverless Functions
 module.exports = app;
+process.on('unhandledRejection', (reason, promise) => { console.error('Unhandled Rejection at:', promise, 'reason:', reason); }); process.on('uncaughtException', (error) => { console.error('Uncaught Exception:', error); });

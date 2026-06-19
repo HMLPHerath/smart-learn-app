@@ -8,6 +8,7 @@ class RouteNames {
   static const studentBooks = '/student/books';
 
   static const parentShell = '/parent';
+  static const parentChat = '/parent/chat/:teacherId';
 
   static const teacherShell = '/teacher';
   static const teacherGradebook = '/teacher/gradebook';

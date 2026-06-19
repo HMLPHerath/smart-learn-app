@@ -249,7 +249,8 @@ class _PerformanceOverview extends StatelessWidget {
                    subj = subj.substring(0, 4);
                 }
 
-                double heightPct = (res['RawMarks'] ?? 0) / 100.0;
+                double rawMarks = double.tryParse(res['RawMarks']?.toString() ?? '0') ?? 0.0;
+                double heightPct = rawMarks / 100.0;
                 double barHeight = 100 * heightPct;
                 if (barHeight < 10) barHeight = 10;
 
