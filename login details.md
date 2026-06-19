@@ -26,3 +26,6 @@ Backend එක run කරන්න
 
 cd backend
 node server.js
+
+
+taskkill /F /IM node.exe

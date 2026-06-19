@@ -18,11 +18,11 @@ class NoticeModel {
   factory NoticeModel.fromMap(Map<String, dynamic> map) {
     return NoticeModel(
       noticeId: map['NoticeID'] ?? map['noticeId'] ?? '',
-      subject: map['Title'] ?? map['subject'] ?? '',
-      audience: map['TargetAudience'] ?? map['audience'] ?? '',
-      body: map['Content'] ?? map['body'] ?? '',
+      subject: map['Subject'] ?? map['Title'] ?? map['subject'] ?? '',
+      audience: map['Audience'] ?? map['TargetAudience'] ?? map['audience'] ?? '',
+      body: map['NoticeBody'] ?? map['Content'] ?? map['body'] ?? '',
       attachmentUrl: map['attachmentUrl'] ?? '',
-      urgent: (map['IsPinned'] == 1 || map['IsPinned'] == true) || (map['urgent'] ?? false),
+      urgent: (map['IsUrgent'] == 1 || map['IsUrgent'] == true || map['IsPinned'] == 1 || map['IsPinned'] == true) || (map['urgent'] ?? false),
     );
   }
 

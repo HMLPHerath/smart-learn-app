@@ -42,20 +42,20 @@ class StudentModel {
       uid: map['StudentID'] ?? map['uid'] ?? '',
       studentId: map['StudentID'] ?? map['studentId'] ?? '',
       fullName: map['FullName'] ?? map['fullName'] ?? '',
-      className: map['ClassID']?.toString() ?? map['className'] ?? '',
+      className: map['ClassName'] ?? map['ClassID']?.toString() ?? map['className'] ?? '',
       classId: map['ClassID']?.toString(),
       section: map['section'] ?? '',
-      attendanceRate: map['attendanceRate'] ?? 0,
-      gpa: (map['gpa'] ?? 0).toDouble(),
-      rank: map['rank'] ?? 0,
-      parentId: map['parentId'] ?? '',
+      attendanceRate: int.tryParse(map['attendanceRate']?.toString() ?? '0') ?? 0,
+      gpa: double.tryParse(map['gpa']?.toString() ?? '0') ?? 0.0,
+      rank: int.tryParse(map['rank']?.toString() ?? '0') ?? 0,
+      parentId: map['ParentID'] ?? map['parentId'] ?? '',
       profilePictureUri: map['ProfilePictureURI'] ?? map['imageUrl'],
       
       // Handle the new fields
       email: map['Email'] ?? map['email'] ?? 'No Email',
       phoneNumber: map['PhoneNumber'] ?? map['phoneNumber'] ?? 'No Phone',
       accountStatus: map['AccountStatus'] ?? map['accountStatus'] ?? 'Pending',
-      dateOfBirth: map['DateOfBirth'] ?? map['dateOfBirth'] ?? 'Unknown',
+      dateOfBirth: map['DateOfBirth']?.toString() ?? map['dateOfBirth']?.toString() ?? 'Unknown',
       homeAddress: map['HomeAddress'] ?? map['homeAddress'] ?? 'No Address',
     );
   }

@@ -285,9 +285,11 @@ app.get('/api/students', async (req, res) => {
     try {
         await sql.connect();
         const result = await sql.query`
-            SELECT s.*, u.Email, u.PhoneNumber, u.AccountStatus, u.ProfilePictureURI 
+            SELECT s.*, psa.ParentID, u.Email, u.PhoneNumber, u.AccountStatus, u.ProfilePictureURI, c.ClassName 
             FROM Student s 
             JOIN [User] u ON s.StudentID = u.UserID
+            LEFT JOIN ParentStudentAssociation psa ON s.StudentID = psa.StudentID
+            LEFT JOIN Class c ON s.ClassID = c.ClassID
         `;
         res.json({ success: true, students: result.recordset });
     } catch (err) {
@@ -303,14 +305,15 @@ app.get('/api/student/:id/profile', async (req, res) => {
 
         const result = await sql.query`
             SELECT 
-                s.StudentID, s.FullName, s.ClassID, s.ParentID, 
+                s.StudentID, s.FullName, s.ClassID, psa.ParentID, 
                 u.Email, u.PhoneNumber, u.ProfilePictureURI,
                 c.ClassName,
                 p.FullName AS "ParentName"
             FROM Student s
             JOIN [User] u ON s.StudentID = u.UserID
             LEFT JOIN Class c ON s.ClassID = c.ClassID
-            LEFT JOIN Parent p ON s.ParentID = p.ParentID
+            LEFT JOIN ParentStudentAssociation psa ON s.StudentID = psa.StudentID
+            LEFT JOIN Parent p ON psa.ParentID = p.ParentID
             WHERE s.StudentID = ${studentId}
         `;
 
@@ -395,7 +398,8 @@ app.get('/api/parent/:id/profile', async (req, res) => {
                 c.ClassName AS "ChildClass"
             FROM Parent p
             JOIN [User] u ON p.ParentID = u.UserID
-            LEFT JOIN Student s ON p.ParentID = s.ParentID
+            LEFT JOIN ParentStudentAssociation psa ON p.ParentID = psa.ParentID
+            LEFT JOIN Student s ON psa.StudentID = s.StudentID
             LEFT JOIN Class c ON s.ClassID = c.ClassID
             WHERE p.ParentID = ${parentId}
         `;
@@ -493,7 +497,7 @@ app.get('/api/students/:id', async (req, res) => {
     try {
         await sql.connect();
         const result = await sql.query`
-            SELECT s.*, u.Email, u.PhoneNumber, u.AccountStatus, u.ProfilePictureURI,
+            SELECT s.*, psa.ParentID, u.Email, u.PhoneNumber, u.AccountStatus, u.ProfilePictureURI, c.ClassName,
                 COALESCE((
                     SELECT CAST(AVG(CASE GradeLetter
                         WHEN 'A+' THEN 4.0
@@ -516,6 +520,8 @@ app.get('/api/students/:id', async (req, res) => {
                 ), 0) AS "attendanceRate"
             FROM Student s 
             JOIN [User] u ON s.StudentID = u.UserID
+            LEFT JOIN ParentStudentAssociation psa ON s.StudentID = psa.StudentID
+            LEFT JOIN Class c ON s.ClassID = c.ClassID
             WHERE s.StudentID = ${req.params.id}
         `;
         if (result.recordset.length > 0) {
