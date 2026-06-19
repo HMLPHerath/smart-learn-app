@@ -8,7 +8,7 @@ const pool = new Pool({
 });
 
 const sql = {
-    connect: async () => {}, // Dummy connect for compatibility
+    connect: async () => { }, // Dummy connect for compatibility
     async query(strings, ...values) {
         let text = typeof strings === 'string' ? strings : strings[0];
         let vals = values;
@@ -20,13 +20,13 @@ const sql = {
         text = text.replace(/\[User\]/g, '"User"');
         text = text.replace(/sysobjects WHERE name='([^']+)' and xtype='U'/g, "information_schema.tables WHERE table_name='$1'");
         text = text.replace(/\bISNULL\b/gi, 'COALESCE');
-        
+
         if (/SELECT TOP (\d+) ([\s\S]*)/i.test(text)) {
             const limit = text.match(/SELECT TOP (\d+)/i)[1];
             text = text.replace(/SELECT TOP \d+/i, 'SELECT');
             text = text + ' LIMIT ' + limit;
         }
-        
+
         try {
             const res = await pool.query(text, vals);
             return { recordset: res.rows.map(row => new Proxy(row, { get: (t, n) => typeof n === 'string' ? (t[n] !== undefined ? t[n] : t[n.toLowerCase()]) : t[n] })) };
@@ -64,7 +64,7 @@ const sql = {
             text = text.replace(/\[User\]/g, '"User"');
             text = text.replace(/sysobjects WHERE name='([^']+)' and xtype='U'/g, "information_schema.tables WHERE table_name='$1'");
             text = text.replace(/\bISNULL\b/gi, 'COALESCE');
-            
+
             const res = await this.transaction.client.query(text, vals);
             return { recordset: res.rows.map(row => new Proxy(row, { get: (t, n) => typeof n === 'string' ? (t[n] !== undefined ? t[n] : t[n.toLowerCase()]) : t[n] })) };
         }
@@ -130,7 +130,7 @@ app.get('/test', async (req, res) => {
 app.post('/demo-insert', async (req, res) => {
     try {
         await sql.connect();
-        
+
         // Ensure table exists, if not, create a basic one for demo
         try {
             await sql.query`
@@ -144,7 +144,7 @@ app.post('/demo-insert', async (req, res) => {
                     ProfilePictureURI VARCHAR(255)
                 )
             `;
-        } catch(e) {
+        } catch (e) {
             console.log('Error creating table:', e.message);
         }
 
@@ -168,20 +168,20 @@ app.post('/api/login', async (req, res) => {
         const crypto = require('crypto');
         const hashedPassword = crypto.createHash('sha256').update(password).digest('hex');
         await sql.connect();
-        
+
         // Use parameterized query to prevent SQL injection
         const result = await sql.query`SELECT * FROM [User] WHERE Email = ${email} AND PasswordHash = ${hashedPassword}`;
-        
+
         if (result.recordset.length > 0) {
             const user = result.recordset[0];
-            
+
             // Determine role from UserID prefix
             let role = 'unknown';
             if (user.UserID.startsWith('ADM-')) role = 'admin';
             else if (user.UserID.startsWith('STU-')) role = 'student';
             else if (user.UserID.startsWith('TEA-')) role = 'teacher';
             else if (user.UserID.startsWith('PAR-')) role = 'parent';
-            
+
             res.json({
                 success: true,
                 message: 'Login successful',
@@ -205,9 +205,9 @@ app.get('/api/users/:id', async (req, res) => {
     try {
         const userId = req.params.id;
         await sql.connect();
-        
+
         const result = await sql.query`SELECT * FROM [User] WHERE UserID = ${userId}`;
-        
+
         if (result.recordset.length > 0) {
             const user = result.recordset[0];
             let role = 'unknown';
@@ -215,7 +215,7 @@ app.get('/api/users/:id', async (req, res) => {
             else if (user.UserID.startsWith('STU-')) role = 'student';
             else if (user.UserID.startsWith('TEA-')) role = 'teacher';
             else if (user.UserID.startsWith('PAR-')) role = 'parent';
-            
+
             res.json({
                 success: true,
                 user: {
@@ -255,7 +255,7 @@ app.get('/api/student/:id/profile', async (req, res) => {
     try {
         const studentId = req.params.id;
         await sql.connect();
-        
+
         const result = await sql.query`
             SELECT 
                 s.StudentID, s.FullName, s.ClassID, s.ParentID, 
@@ -268,11 +268,11 @@ app.get('/api/student/:id/profile', async (req, res) => {
             LEFT JOIN Parent p ON s.ParentID = p.ParentID
             WHERE s.StudentID = ${studentId}
         `;
-        
+
         if (result.recordset.length > 0) {
             // Mocking attendance to 98% for now, as there isn't an attendance table logic defined here easily.
             const profile = result.recordset[0];
-            profile.Attendance = '98%'; 
+            profile.Attendance = '98%';
             res.json({ success: true, profile: profile });
         } else {
             res.status(404).json({ success: false, message: 'Student not found' });
@@ -287,7 +287,7 @@ app.get('/api/teacher/:id/profile', async (req, res) => {
     try {
         const teacherId = req.params.id;
         await sql.connect();
-        
+
         const result = await sql.query`
             SELECT 
                 t.TeacherID, t.FullName, t.Specialization,
@@ -296,10 +296,10 @@ app.get('/api/teacher/:id/profile', async (req, res) => {
             JOIN [User] u ON t.TeacherID = u.UserID
             WHERE t.TeacherID = ${teacherId}
         `;
-        
+
         if (result.recordset.length > 0) {
             const profile = result.recordset[0];
-            
+
             // Get classes taught by teacher
             const classResult = await sql.query`
                 SELECT DISTINCT c.ClassName
@@ -307,9 +307,9 @@ app.get('/api/teacher/:id/profile', async (req, res) => {
                 JOIN Class c ON s.ClassID = c.ClassID
                 WHERE s.TeacherID = ${teacherId}
             `;
-            
+
             profile.AssignedClasses = classResult.recordset.map(c => c.ClassName).join(', ') || 'Not Assigned';
-            
+
             // Get stats (Classes count, Students count)
             const statsResult = await sql.query`
                 SELECT 
@@ -319,14 +319,14 @@ app.get('/api/teacher/:id/profile', async (req, res) => {
                 LEFT JOIN Student st ON s.ClassID = st.ClassID
                 WHERE s.TeacherID = ${teacherId}
             `;
-            
+
             profile.Stats = {
                 Classes: statsResult.recordset[0].ClassCount,
                 Students: statsResult.recordset[0].StudentCount,
                 Attendance: '96%', // Mocked for now
                 AvgMarks: '82%' // Mocked for now
             };
-            
+
             res.json({ success: true, profile: profile });
         } else {
             res.status(404).json({ success: false, message: 'Teacher not found' });
@@ -341,7 +341,7 @@ app.get('/api/parent/:id/profile', async (req, res) => {
     try {
         const parentId = req.params.id;
         await sql.connect();
-        
+
         const result = await sql.query`
             SELECT 
                 p.ParentID, p.FullName, 
@@ -354,7 +354,7 @@ app.get('/api/parent/:id/profile', async (req, res) => {
             LEFT JOIN Class c ON s.ClassID = c.ClassID
             WHERE p.ParentID = ${parentId}
         `;
-        
+
         if (result.recordset.length > 0) {
             res.json({ success: true, profile: result.recordset[0] });
         } else {
@@ -370,15 +370,15 @@ app.get('/api/parent/:id/results', async (req, res) => {
     try {
         const parentId = req.params.id;
         await sql.connect();
-        
+
         // Find the student ID for this parent
         const studentResult = await sql.query`SELECT StudentID FROM Student WHERE ParentID = ${parentId}`;
         if (studentResult.recordset.length === 0) {
             return res.status(404).json({ success: false, message: 'Child not found for this parent' });
         }
-        
+
         const studentId = studentResult.recordset[0].StudentID;
-        
+
         // Get the results for the student
         const resultsQuery = await sql.query`
             SELECT 
@@ -388,21 +388,21 @@ app.get('/api/parent/:id/results', async (req, res) => {
             JOIN Course c ON r.CourseID = c.CourseID
             WHERE r.StudentID = ${studentId}
         `;
-        
+
         const results = resultsQuery.recordset;
-        
+
         if (results.length > 0) {
             let totalMarks = 0;
             results.forEach(r => totalMarks += r.RawMarks);
             const average = Math.round(totalMarks / results.length);
-            
-            res.json({ 
-                success: true, 
+
+            res.json({
+                success: true,
                 term: results[0].AcademicTerm,
                 year: results[0].AcademicYear,
                 average: average,
                 rank: '06', // Mocked rank for now
-                results: results 
+                results: results
             });
         } else {
             res.json({ success: true, term: 'N/A', year: '', average: 0, rank: 'N/A', results: [] });
@@ -417,15 +417,15 @@ app.get('/api/parent/:id/teachers', async (req, res) => {
     try {
         const parentId = req.params.id;
         await sql.connect();
-        
+
         // Find the student ID & ClassID for this parent
         const studentResult = await sql.query`SELECT ClassID FROM Student WHERE ParentID = ${parentId}`;
         if (studentResult.recordset.length === 0) {
             return res.status(404).json({ success: false, message: 'Child not found for this parent' });
         }
-        
+
         const classId = studentResult.recordset[0].ClassID;
-        
+
         // Get the teachers who teach this class
         const teacherQuery = await sql.query`
             SELECT DISTINCT
@@ -436,7 +436,7 @@ app.get('/api/parent/:id/teachers', async (req, res) => {
             JOIN [User] u ON t.TeacherID = u.UserID
             WHERE s.ClassID = ${classId}
         `;
-        
+
         res.json({ success: true, teachers: teacherQuery.recordset });
     } catch (err) {
         res.status(500).json({ success: false, message: 'Server error', error: err.message });
@@ -490,23 +490,23 @@ app.post('/api/students', async (req, res) => {
         const defaultPasswordHash = '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92'; // 123456
 
         await sql.connect();
-        
+
         const transaction = new sql.Transaction();
         await transaction.begin();
-        
+
         try {
             const request1 = new sql.Request(transaction);
             await request1.query`
                 INSERT INTO [User] (UserID, Email, PasswordHash, PhoneNumber, AccountStatus)
                 VALUES (${studentId}, ${email}, ${defaultPasswordHash}, ${phoneNumber}, 'Active')
             `;
-            
+
             const request2 = new sql.Request(transaction);
             await request2.query`
                 INSERT INTO Student (StudentID, FullName, DateOfBirth, HomeAddress, BirthCertificatePath, ClassID)
                 VALUES (${studentId}, ${fullName}, ${dateOfBirth}, ${address}, '/docs/default.pdf', NULL)
             `;
-            
+
             if (parentId) {
                 const request3 = new sql.Request(transaction);
                 await request3.query`
@@ -514,7 +514,7 @@ app.post('/api/students', async (req, res) => {
                     VALUES (${parentId}, ${studentId}, 'Guardian')
                 `;
             }
-            
+
             await transaction.commit();
             res.json({ success: true, message: 'Student created successfully' });
         } catch (err) {
@@ -606,23 +606,23 @@ app.post('/api/teachers', async (req, res) => {
         const defaultPasswordHash = '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92'; // 123456
 
         await sql.connect();
-        
+
         const transaction = new sql.Transaction();
         await transaction.begin();
-        
+
         try {
             const request1 = new sql.Request(transaction);
             await request1.query`
                 INSERT INTO [User] (UserID, Email, PasswordHash, PhoneNumber, AccountStatus)
                 VALUES (${teacherId}, ${email}, ${defaultPasswordHash}, ${phoneNumber}, 'Active')
             `;
-            
+
             const request2 = new sql.Request(transaction);
             await request2.query`
                 INSERT INTO Teacher (TeacherID, FullName, Specialization)
                 VALUES (${teacherId}, ${fullName}, ${subject})
             `;
-            
+
             await transaction.commit();
             res.json({ success: true, message: 'Teacher created successfully' });
         } catch (err) {
@@ -679,23 +679,23 @@ app.post('/api/parents', async (req, res) => {
         const defaultPasswordHash = '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92'; // 123456
 
         await sql.connect();
-        
+
         const transaction = new sql.Transaction();
         await transaction.begin();
-        
+
         try {
             const request1 = new sql.Request(transaction);
             await request1.query`
                 INSERT INTO [User] (UserID, Email, PasswordHash, PhoneNumber, AccountStatus)
                 VALUES (${parentId}, ${email}, ${defaultPasswordHash}, ${phoneNumber}, 'Active')
             `;
-            
+
             const request2 = new sql.Request(transaction);
             await request2.query`
                 INSERT INTO Parent (ParentID, FullName, NIC_Number, NIC_CopyPath)
                 VALUES (${parentId}, ${fullName}, ${nic}, '/docs/default_nic.pdf')
             `;
-            
+
             await transaction.commit();
             res.json({ success: true, message: 'Parent created successfully' });
         } catch (err) {
@@ -722,14 +722,14 @@ app.get('/api/notices', async (req, res) => {
 app.post('/api/notices', async (req, res) => {
     try {
         const { noticeId, authorId, subject, noticeBody, audience, isUrgent } = req.body;
-        
+
         await sql.connect();
-        
+
         await sql.query`
             INSERT INTO Notice (CreatorAdminID, Subject, NoticeBody, Audience, IsUrgent)
             VALUES (${authorId}, ${subject}, ${noticeBody}, ${audience}, ${isUrgent ? 1 : 0})
         `;
-        
+
         res.json({ success: true, message: 'Notice created successfully' });
     } catch (err) {
         res.status(500).json({ success: false, message: 'Server error', error: err.message });
@@ -773,14 +773,14 @@ app.get('/api/teachers', async (req, res) => {
 app.post('/api/schedule', async (req, res) => {
     try {
         const { dayOfWeek, startTime, endTime, roomIdentifier, classId, teacherId, courseId } = req.body;
-        
+
         await sql.connect();
-        
+
         await sql.query`
             INSERT INTO ScheduleItem (DayOfWeek, StartTime, EndTime, RoomIdentifier, ClassID, TeacherID, CourseID)
             VALUES (${dayOfWeek}, ${startTime}, ${endTime}, ${roomIdentifier}, ${classId}, ${teacherId}, ${courseId})
         `;
-        
+
         res.json({ success: true, message: 'Schedule created successfully' });
     } catch (err) {
         res.status(500).json({ success: false, message: 'Server error', error: err.message });
@@ -792,15 +792,15 @@ app.get('/api/student/:id/schedule', async (req, res) => {
     try {
         await sql.connect();
         const studentId = req.params.id;
-        
+
         // Retrieve student's class
         const classResult = await sql.query`SELECT ClassID FROM Student WHERE StudentID = ${studentId}`;
         if (classResult.recordset.length === 0) {
             return res.status(404).json({ success: false, message: 'Student not found' });
         }
-        
+
         const classId = classResult.recordset[0].ClassID;
-        
+
         // Get the schedule for that class
         const result = await sql.query`
             SELECT 
@@ -822,7 +822,7 @@ app.get('/api/student/:id/schedule', async (req, res) => {
                 END, 
                 s.StartTime
         `;
-        
+
         res.json({ success: true, schedule: result.recordset });
     } catch (err) {
         res.status(500).json({ success: false, message: 'Server error', error: err.message });
@@ -842,21 +842,21 @@ app.get('/api/admin/dashboard-stats', async (req, res) => {
                 (SELECT COUNT(*) FROM Teacher) AS totalTeachers,
                 (SELECT COUNT(*) FROM Notice) AS totalNotices
         `;
-        
+
         const noticesResult = await sql.query`
             SELECT TOP 3 * FROM Notice 
             WHERE IsUrgent = 1
             ORDER BY CreatedAt DESC
         `;
-        
+
         const updatesResult = await sql.query`
             SELECT TOP 3 UserID, Email, AccountStatus 
             FROM [User] 
             ORDER BY UserID DESC
         `;
-        
-        res.json({ 
-            success: true, 
+
+        res.json({
+            success: true,
             stats: {
                 counts: countsResult.recordset[0],
                 recentAlerts: noticesResult.recordset,
@@ -955,7 +955,7 @@ app.post('/api/gradebook', async (req, res) => {
                       AND AcademicTerm = ${term} 
                       AND AcademicYear = ${year}
                 `;
-                
+
                 if (exists.recordset.length > 0) {
                     const updateReq = new sql.Request(transaction);
                     await updateReq.query`
@@ -989,11 +989,11 @@ app.post('/api/upload', upload.single('file'), (req, res) => {
         if (!req.file) {
             return res.status(400).json({ success: false, message: 'No file uploaded' });
         }
-        
+
         const fileUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
-        
-        res.json({ 
-            success: true, 
+
+        res.json({
+            success: true,
             message: 'File uploaded successfully',
             fileUrl: fileUrl
         });
@@ -1016,12 +1016,12 @@ app.post('/api/guidebooks', async (req, res) => {
     try {
         const { title, subtitle, iconName, colorHex, fileUrl, category } = req.body;
         await sql.connect();
-        
+
         await sql.query`
             INSERT INTO GuideBook (Title, Subtitle, IconName, ColorHex, FileUrl, Category)
             VALUES (${title}, ${subtitle}, ${iconName}, ${colorHex}, ${fileUrl}, ${category})
         `;
-        
+
         res.json({ success: true, message: 'Guide book added successfully' });
     } catch (err) {
         res.status(500).json({ success: false, message: 'Server error', error: err.message });
@@ -1031,3 +1031,6 @@ app.post('/api/guidebooks', async (req, res) => {
 app.listen(PORT, () => {
     console.log(`Backend API running at http://localhost:${PORT}`);
 });
+
+// Export the Express API for Vercel Serverless Functions
+module.exports = app;
