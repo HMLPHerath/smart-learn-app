@@ -195,7 +195,7 @@ app.post('/api/login', async (req, res) => {
             res.status(401).json({ success: false, message: 'Invalid email or password' });
         }
     } catch (err) {
-        console.error('Login failed', err);
+        console.error('Login failed', err.stack);
         res.status(500).json({ success: false, message: 'Server error during login', error: err.message });
     }
 });
