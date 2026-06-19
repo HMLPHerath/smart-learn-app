@@ -9,8 +9,8 @@ class SqlService {
     if (kIsWeb) {
       return 'http://localhost:3000';
     } else if (Platform.isAndroid) {
-      // Physical phone වලට PC එකේ IP එක දෙන්න ඕනේ. (Emulator එකට නම් 10.0.2.2)
-      return 'http://192.168.1.212:3000';
+      // Emulator එකට 10.0.2.2 භාවිතා කළ යුතුයි
+      return 'http://10.0.2.2:3000';
     } else {
       return 'http://localhost:3000';
     }

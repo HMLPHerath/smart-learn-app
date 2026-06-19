@@ -77,7 +77,7 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     } catch (e) {
       if (!mounted) return;
-      _showSnack('Login failed. Check email, password, and Database role.');
+      _showSnack('Login failed: $e');
     } finally {
       if (mounted) {
         setState(() => loading = false);
