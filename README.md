@@ -33,7 +33,7 @@ Encrypted passwords, strict role-based access control, and stringent data valida
 Node.js, Express.js
 
 • Database: 
-PostgreSQL / Microsoft SQL Server
+PostgreSQL
 
 • ADBMS Implementations: 
   - Advanced Window Functions for dynamic academic ranking.
